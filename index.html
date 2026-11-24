@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Netskope Log Analyzer</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAABmJLR0QA/wD/AP+gvaeTAAAH1UlEQVR4nO2be3BU1R3HP+fshhBMshuyG7QBEohTGEZnlKIlI89SHtpCWqcqoKSxQt+0tfZBMTVAU7Q6FZRirUFaKDD0D9oJ4WEGS8kDLXRgGHUMjLuE1QghD9ndBJLS3Xv6RzYLy+7msbl7r9p+/rp7zj33fH+/e+5vf789ewX9I2w2x2RlkUVKqekCcQswGrhpAGON5DKIDxRasxCiVgS1Sp+v7WR/g0RffbaRzgeUJn6F4LP6ajWMM0KoUt9HrXsAFeuEmA6w2XIKlGAXgruTLtEY/ik0sdTnu9h4Y0eUAzKynNOEEHtQ5BgmzxjahSYe9PkuHr6+McIBdvvNszWhVQMphsszhqua0uZ1ettqehvCDrDZRo1TUh0DnKbJM4Z2gmqq39/qApChRqGE2v0/YDxANhaxvffmSwDbyFEPfooC3kAotI3MuZ+QA4TS1DqzFRmNUqKcUJIzRUn5L7MFmYFUarJUFlFkthCz0KQokkoxzWwhZqFguhRC5JotxCyEIteK4pZEBjudDr61Yjn3LpjH+PHjAHC7z/Ja9SFefqWCtrZ2vfUmg1yRmZUTs0joi6JFC3npdxtJT0+P2d/R0cH3Vj5O5d4qPUQmlUE74CtFi/jT1lcQoq9CEpRSFJcsZ2/VvqFqTCpyAOeEcTodbN60IWz8ey4XDy8rIXdsAbljC3ik+FFcbjcAQgg2b9qAw5GdHOU60ecKKEyRLE6zkil7DJ70458w8fs/gJDxc+beh8/nI8/a0+8JKOx2O4cPHaSgYDwADS9upGHj8/g1xe6uAG/+RzPGsgESdwUUpkhetacyP9VCYYqkMEVSMHdeuH/N2nJ8Ph9l6SlUZw2nOms4T6Wn4PV6KVtXHj7v1rnzKEyRzE+18Ko9lcKUQS26pBNXzeI0a1SndcyY8PGRmjryrIIladZw29I0K3lWwZEjtdfGjM2LmGzxded/HPh43Q4TiOuA3V0BbnxaA++/Hz6ePWsGnoBiV1cg3LazK4AnoJg9a+a1MZ5z4WMtdN3B4HQ6KF29iqO1h7nQ1MiFpkbqa/5O6epVugTYwQXBx59g4sofAuByu5kz9z68Xm/fQfCFDTS8sCGhIGhEvjGoPMDhyObUiWNkZGRAKPMrW1cefuZnz5rJ2rLScGbo9/u543Ofp739o0ELMyrfGHQiVLRoIdv+WNGvME3TKC55jKp9BwYtyul0cOrEsfCdf8/lYs3aco7U1EHo8VtTVsqtBQUQcvSdU6YmlH4nlAovWvhlNm/aQGZmZsx+v9/Pd1f+iKqq/f1eSzlmoPKKUVZbuO2Xxfn8fMlYuCHfKLg5CIC72RL1qD29y8Ov/+yJNC7gQ3i2I9pqiUdCDgDIzh7Jt7+5ggXz54ZFuFxuXqs+xB8qtgxo2SvnHIJ37QARGYuPrYfbQt+4Dy8rYd/+gzxf0sFjc7oA2PJ6Gk9sy2Dhwi+xY9tWAN7yQGFprEk0LMcfiuuEhB0wVJTlJrSZdai06Gr8YgWkD+85zh1bwKh0Hyefi1zek3+aTctlO00eFwCd3TBqRey5ZHMV8sTy2H1DtiRB1ISfxTTeaExxgLLdjpYf+44ANLZcO549awbuZgtbXk8Lt1UcSsPdbInIN9wX402mITzb485l/CMgLATvOYCy3RHddfksdDVRuiyfVUt7guD1+UZfQXD9Tg/rdxgYBBNFG7cCbVJ5dEegE0vNdET3eUPzDWMdkDqKwKx6sEZ/fcp3S5GNFeHPRuQbGB0Dgrc9E9N44T2FPLc1oq1ybxXFJcvx+/1xr+f3+yl+dHnCxmPkClA5XyR4184YHUEsRxcgfG/FHKdHvtEXhjhAWdLQZtShRoyJ6pONLyPfLUu2hLgY8gioCb+Iabzo/hBx5lkjJMRF959novcLJK7WVA6egpeqoa3j2rnyndWI4GW9JQwKXR+Bfuv3LvjOFvjbcRAX9mM5+Q29pk4Y3Rww8PodHtnYTdVzhYju83pMPSR0iQGD2y+A368AZ/q/9Zh6yPS5AmLV6rGIV79rzhEAyNYrUanrb579LeufMTcA0pcDlGMGwbv/ElWrxyJW/d79tYlcvWc0AMPqmxi+53RE/f722+8wbeYcXY1JhLjWqbziARkPkH/dX6uO1NShOUeEjQe4Om00mnNExH7BuHH5CYvWk//vC8TrEJ7toAb2E/aN9btsvcKw+qZw27D6D5CtVyLq97Nno/61agpxEyHRVovl+EMDCoL76/O5PVS/rykrpa7+Dbx7TjOstmcjpTcIrnnqyfCYAwer9bNiCOiSBxhZv+uNbomQUfW73ugWBI2q3/VGZGbl+IEMvS6Y7PpdZ/wi055z5hP8RsgQEaelEupDs2WYhRLqvBRC1JktxCyERo0UQa3SbCFmIaFShAJhAzDBbEHGohr8l1onSUAJoWLtq36qUUo8yXXvDInMrJw3gKnmyjKMo/5LLdMB1ZsIKankEqDVZGFG0C40vt77ImU4E/R6m89pSnsAuGqqvORyVaG+6vO1uHsbIlLhTm9bjYIvIGiJOfyTTbtUckHHpdaIr/2oWqDjUstRERRTgTcNlZdcjkolp3i9zf+4saOfl6dz7u95u0pNTK6+ZKEaNCVKO70tf413Rt+1awi73XmnJkWRgulCic+AGg3E3v0wj04QTUqo80KjVqIqvd7WU/0N+i8Kw1kx57YqiQAAAABJRU5ErkJggg==">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1116">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: clinical support tool, calm and direct, speaks Portuguese to a support analyst.
+   IDEA: a metro diagram of the client's life — each event a station on the line.
+   PICTURE: the drop zone first; after analysis, a verdict plus the metro timeline.
+   COLOUR and TYPE: white / night #0e1116, metro red, blue, amber, green; Figtree 800 + Figtree.
+   LAYOUT: verdict band, line, findings by severity, then raw explorer. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#0e1116);--ink:light-dark(#111418,#eef1f5);--mute:light-dark(#5b6270,#9aa3b2);
+--line:light-dark(#e3e6ea,#262c36);--soft:light-dark(#f4f6f8,#161b22);
+--red:#e6261f;--blue:light-dark(#0a5cff,#4d8bff);--amber:#ffb400;--green:#00a05a;--gray:light-dark(#8a919c,#6b7380);
+--redbg:light-dark(#fdeceb,#3a1513);--ambbg:light-dark(#fff6dc,#33290c);--bluebg:light-dark(#e8f0ff,#12213d);--grnbg:light-dark(#e4f6ed,#0f2a1d)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Figtree,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-weight:800;line-height:1.08;margin:0;text-wrap:balance}
+h1{font-size:clamp(32px,5vw,50px)}h2{font-size:clamp(24px,3vw,32px)}h3{font-size:18px;line-height:1.3}
+.band{padding:clamp(28px,4vw,56px) max(5vw,16px)}.wrap{max-width:1240px;margin:0 auto}
+.mute{color:var(--mute)}small,.small{font-size:13px}
+button,select,input{font:inherit;font-size:16px;color:inherit}
+button{min-height:44px;padding:0 18px;border-radius:999px;border:2px solid var(--ink);background:var(--bg);font-weight:600;cursor:pointer}
+button.primary{background:var(--ink);color:var(--bg)}
+button:focus-visible,select:focus-visible,input:focus-visible,summary:focus-visible,.drop:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+input,select{min-height:44px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);padding:0 12px}
+.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:18px}
+.dot{width:14px;height:14px;border-radius:50%;border:4px solid var(--ink);background:var(--bg)}
+/* drop zone */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,4vw,56px);align-items:center;margin-top:28px}
+.hero p{font-size:17px;max-width:60ch}
+.drop{position:relative;border:3px dashed var(--ink);border-radius:24px;min-height:340px;display:grid;place-items:center;text-align:center;padding:28px;cursor:pointer;background:var(--soft);transition:transform .2s}
+.drop.over{border-color:var(--blue);background:var(--bluebg);transform:scale(1.01)}
+.drop svg{width:min(320px,80%);height:auto;display:block;margin:0 auto 14px}
+.drop strong{font-size:22px;display:block}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{font-size:13px;padding:4px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--line);white-space:nowrap}
+.lock{display:flex;gap:10px;align-items:flex-start;margin-top:18px;font-size:14px;color:var(--mute)}
+#progress{margin-top:16px;font-weight:600;min-height:24px}
+/* verdict */
+.verdict{border-top:10px solid var(--gray)}
+.verdict.crit{border-color:var(--red)}.verdict.warn{border-color:var(--amber)}.verdict.ok{border-color:var(--green)}
+.vgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(20px,4vw,48px);margin-top:18px}
+.counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px}
+.count{border-radius:14px;padding:14px;background:var(--soft)}
+.count b{display:block;font-size:clamp(28px,4vw,40px);font-weight:800;line-height:1}
+.count.c b{color:var(--red)}.count.w b{color:light-dark(#b07a00,var(--amber))}.count.i b{color:var(--blue)}.count.n b{color:var(--gray)}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 16px;font-size:15px;margin:0}
+.facts dt{color:var(--mute)}.facts dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.pill{display:inline-block;padding:1px 10px;border-radius:999px;font-size:13px;font-weight:700;white-space:nowrap}
+.p-crit{background:var(--redbg);color:var(--red)}.p-warn{background:var(--ambbg);color:light-dark(#8a5d00,var(--amber))}
+.p-info{background:var(--bluebg);color:var(--blue)}.p-noise{background:var(--soft);color:var(--mute)}.p-ok{background:var(--grnbg);color:var(--green)}
+/* metro */
+.metro{overflow-x:auto;border-radius:16px;background:var(--soft);margin-top:18px}
+.metro svg{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px;font-size:13px;color:var(--mute)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.fig{position:relative;min-height:220px;margin-top:16px}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
+/* findings */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.filters button{min-height:40px;font-size:14px;border-width:1.5px}
+.filters button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.finding{border:1.5px solid var(--line);border-left:8px solid var(--gray);border-radius:14px;margin-bottom:12px;background:var(--bg)}
+.finding.crit{border-left-color:var(--red)}.finding.warn{border-left-color:var(--amber)}.finding.info{border-left-color:var(--blue)}
+.finding summary{list-style:none;cursor:pointer;padding:16px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;align-items:center}
+.finding summary::-webkit-details-marker{display:none}
+.finding .meta{font-size:13px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 14px}
+.finding .num{font-size:26px;font-weight:800;text-align:right;white-space:nowrap}
+.fbody{padding:0 18px 18px;display:grid;gap:12px}
+.fbody h4{margin:0 0 2px;font-size:14px;color:var(--mute);font-weight:600}
+.fbody p{margin:0;max-width:80ch}
+.samples{font:12.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--soft);border-radius:10px;padding:10px 12px;overflow-x:auto;white-space:pre}
+.linkbtn{border:0;background:none;padding:0;min-height:auto;color:var(--blue);text-decoration:underline;font-weight:600;cursor:pointer;font-size:14px}
+.empty{padding:22px;border-radius:14px;background:var(--grnbg);color:var(--green);font-weight:600}
+.fix{border:2px solid var(--green);border-radius:12px;padding:14px 16px;background:var(--grnbg)}
+.fix ol{margin:6px 0 12px;padding-left:22px;display:grid;gap:10px}.fix li{max-width:90ch}
+.cmd{position:relative;margin-top:6px}.cmd pre{margin:0;font:12.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 74px 10px 12px;overflow-x:auto;white-space:pre}
+.cbtn{position:absolute;top:6px;right:6px;min-height:32px;padding:0 12px;font-size:13px;border-width:1.5px}
+.refs{margin:4px 0 12px;padding-left:20px}.refs a,.srch a{color:var(--blue);font-weight:600}
+.srch{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px}.srch a{white-space:nowrap}
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--mute);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto}
+/* explorer */
+.xbar{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:16px}
+#xout{font:12.5px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--soft);border-radius:12px;padding:10px 0;max-height:560px;overflow:auto;margin-top:12px}
+#xout div{padding:1px 12px;white-space:pre;}
+#xout .error,#xout .critical{color:var(--red)}#xout .warn{color:light-dark(#8a5d00,var(--amber))}#xout .debug{color:var(--mute)}
+mark{background:var(--amber);color:#111;border-radius:2px}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+nav.scroll{display:flex;gap:18px;white-space:nowrap;padding:10px max(5vw,16px);border-bottom:1px solid var(--line);font-weight:600;font-size:15px}
+nav.scroll a{color:var(--ink);text-decoration:none;flex:none}
+@media(min-width:900px){nav.scroll{position:sticky;top:0;background:var(--bg);z-index:5}}
+html{scroll-padding-top:72px}
+.hidden{display:none!important}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;opacity:0;transition:opacity .25s;pointer-events:none}
+#toast.show{opacity:1}
+textarea{width:100%;min-height:200px;font:13px ui-monospace,monospace;border-radius:10px;border:1.5px solid var(--line);background:var(--soft);color:var(--ink);padding:10px}
+@media(max-width:800px){.hero,.vgrid{grid-template-columns:minmax(0,1fr)}.counts{grid-template-columns:repeat(2,minmax(0,1fr))}.xbar{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--mute)}.stack td:empty{display:none}.finding .num{font-size:20px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+
+<section class="band" id="start">
+ <div class="wrap">
+  <div class="top">
+   <div class="brand"><span class="dot"></span>Netskope Log Analyzer <span class="small mute" style="font-weight:500">v1.0.1</span></div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="install" class="primary hidden" type="button">Instalar app</button><button id="reset" class="hidden" type="button">Analisar outro pacote</button></div>
+  </div>
+  <div class="hero" id="hero">
+   <div>
+    <h1>Solte o pacote de logs e veja o que está falhando.</h1>
+    <p>Importe o <b>.zip</b> gerado pelo Netskope Client (“Save logs” / nsdiag) ou arquivos de log soltos. O app lê tudo, separa o que é problema real do que é ruído conhecido e explica o que fazer.</p>
+    <div class="chips"><span class="chip">nsdebuglog.log</span><span class="chip">npadebuglog.log</span><span class="chip">nsAppUI.log</span><span class="chip">nsInstallation.log</span><span class="chip">network-state.log</span><span class="chip">nsconfig.json</span><span class="chip">Windows · macOS · Linux</span></div>
+    <div class="lock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>A análise roda 100% no seu navegador. Nenhum log é enviado para lugar nenhum — o pacote contém dados sensíveis (token, serial, e-mails).</span></div>
+   </div>
+   <div>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Selecionar ou soltar arquivos de log">
+     <div>
+      <svg viewBox="0 0 320 120" aria-hidden="true">
+       <path d="M10 90 H90 L130 50 H230 L262 82 H310" fill="none" stroke="var(--blue)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+       <path d="M10 30 H120 L150 60" fill="none" stroke="var(--red)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+       <g stroke="var(--ink)" stroke-width="5" fill="var(--bg)">
+        <circle cx="40" cy="90" r="11"/><circle cx="130" cy="50" r="11"/><circle cx="190" cy="50" r="11"/><circle cx="290" cy="82" r="11"/><circle cx="60" cy="30" r="11"/>
+       </g>
+       <circle cx="190" cy="50" r="5" fill="var(--amber)"/><circle cx="290" cy="82" r="5" fill="var(--green)"/><circle cx="60" cy="30" r="5" fill="var(--red)"/>
+      </svg>
+      <strong>Arraste o .zip aqui</strong>
+      <span class="mute">ou clique para escolher arquivos</span>
+      <div id="progress" aria-live="polite"></div>
+     </div>
+    </div>
+    <input type="file" id="file" multiple class="hidden" accept=".zip,.log,.txt,.json,.conf,.bak,*">
+   </div>
+  </div>
+ </div>
+</section>
+
+<div id="results" class="hidden">
+ <nav class="scroll" aria-label="Seções">
+  <a href="#resumo">Resumo</a><a href="#linha">Linha do tempo</a><a href="#diagnostico">Diagnóstico</a><a href="#outros">Erros não classificados</a><a href="#arquivos">Arquivos</a><a href="#explorador">Explorador</a>
+ </nav>
+
+ <section class="band verdict" id="resumo">
+  <div class="wrap">
+   <div class="sec-head"><h2 id="vtitle"></h2><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" id="copyrep" type="button">Copiar relatório</button></div></div>
+   <p id="vsub" class="mute" style="max-width:75ch;margin:10px 0 0"></p>
+   <div class="vgrid">
+    <div>
+     <div class="counts" id="counts"></div>
+     <div id="topissues" style="margin-top:18px"></div>
+    </div>
+    <dl class="facts" id="facts"></dl>
+   </div>
+   <div id="repbox" class="hidden" style="margin-top:16px"><p class="small mute">Não foi possível copiar automaticamente. Selecione e copie o texto abaixo:</p><textarea id="reptxt" readonly></textarea></div>
+  </div>
+ </section>
+
+ <section class="band" id="linha" style="padding-top:0">
+  <div class="wrap">
+   <h2>Linha do tempo do cliente</h2>
+   <p class="mute" style="margin:8px 0 0">Cada estação é um evento: início/parada do serviço, registro, túnel conectado ou derrubado, mudança de localização.</p>
+   <div class="metro" id="metro"></div>
+   <div class="legend"><span><i style="background:var(--green)"></i>Conectado / registrado</span><span><i style="background:var(--red)"></i>Queda / parada</span><span><i style="background:var(--amber)"></i>Desabilitado / alerta</span><span><i style="background:var(--blue)"></i>Informativo</span></div>
+   <h3 style="margin-top:30px">Erros e alertas ao longo do tempo</h3>
+   <div class="fig" id="chart"><svg id="chartsvg" role="img" aria-label="Erros e alertas por intervalo de tempo"></svg></div>
+   <div class="legend"><span><i style="background:var(--red);border-radius:2px"></i>Erros e críticos</span><span><i style="background:var(--amber);border-radius:2px"></i>Alertas (warn)</span></div>
+  </div>
+ </section>
+
+ <section class="band" id="diagnostico" style="background:var(--soft)">
+  <div class="wrap">
+   <h2>Diagnóstico</h2>
+   <p class="mute" style="margin:8px 0 0">Problemas identificados por padrões conhecidos do Netskope Client. Clique em um item para ver a explicação, <b>como resolver passo a passo</b> (com comandos para o sistema detectado), links da documentação oficial e exemplos do log.</p>
+   <p class="small mute" style="margin:6px 0 0">Resoluções baseadas em docs.netskope.com e community.netskope.com. Os botões “Pesquisar mais” abrem a busca já preenchida na documentação, na comunidade e na base de conhecimento do suporte.</p>
+   <div class="filters" id="filters"></div>
+   <div id="findings"></div>
+  </div>
+ </section>
+
+ <section class="band" id="outros">
+  <div class="wrap">
+   <h2>Erros não classificados</h2>
+   <p class="mute" style="margin:8px 0 16px">Mensagens de erro/alerta que não batem com nenhum padrão conhecido, agrupadas (números, IPs e IDs foram normalizados).</p>
+   <div class="scroll"><table class="stack" id="unclass"></table></div>
+  </div>
+ </section>
+
+ <section class="band" id="arquivos" style="padding-top:0">
+  <div class="wrap">
+   <h2>Arquivos analisados</h2>
+   <div class="scroll" style="margin-top:16px"><table class="stack" id="ftable"></table></div>
+   <p class="small mute" id="skipped" style="margin-top:10px"></p>
+  </div>
+ </section>
+
+ <section class="band" id="explorador" style="background:var(--soft)">
+  <div class="wrap">
+   <h2>Explorador de logs</h2>
+   <div class="xbar">
+    <input id="xq" type="search" placeholder="Buscar texto (ex.: timeout, goskope, Tunnel)" aria-label="Buscar texto">
+    <select id="xlvl" aria-label="Nível"><option value="ew">Erros e alertas</option><option value="e">Só erros/críticos</option><option value="all">Todos os níveis</option></select>
+    <select id="xfile" aria-label="Arquivo"><option value="">Todos os arquivos</option></select>
+   </div>
+   <p class="small mute" id="xinfo" style="margin:10px 0 0"></p>
+   <div id="xout" style="background:var(--bg)"></div>
+  </div>
+ </section>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtN=n=>n.toLocaleString('pt-BR');
+const SEV={crit:{l:'Crítico',o:0},warn:{l:'Atenção',o:1},info:{l:'Informativo',o:2},noise:{l:'Ruído conhecido',o:3}};
+const byCount=(lo,hi,lim)=>c=>c>=lim?hi:lo;
+
+/* ---------- knowledge base ---------- */
+const RULES=[
+{id:'crash',any:1,re:/segmentation fault|SIGSEGV|SIGABRT|core dumped|unhandled exception|terminate called|access violation/i,sev:'crit',cat:'Estabilidade',t:'Travamento (crash) de processo do Netskope',w:'Um processo do cliente encerrou de forma anormal.',a:'Anote horário e versão, colete o pacote completo logo após o evento e abra chamado no suporte Netskope. Verifique se há atualização do cliente.'},
+{id:'disk',any:1,re:/No space left on device/i,sev:'crit',cat:'Sistema',t:'Disco cheio',w:'O sistema não tem espaço para gravar arquivos; configuração e logs podem ficar corrompidos.',a:'Libere espaço em disco e reinicie o serviço do Netskope.'},
+{id:'ssl',re:/code (35|51|58|60),|SSL certificate problem|certificate verify failed|unable to get local issuer|SSL_ERROR|handshake fail/i,sev:'crit',cat:'Certificados',t:'Falhas de TLS / certificado na comunicação com o tenant',w:'A conexão HTTPS com o Netskope foi recusada por problema de certificado. Causas típicas: outro proxy/firewall fazendo inspeção SSL, data/hora do computador errada ou CA ausente.',a:'Confira data/hora do sistema; verifique se há proxy, antivírus ou firewall inspecionando TLS para *.goskope.com e libere bypass; confirme a CA do sistema.'},
+{id:'certexp',any:1,re:/certificate (has )?expired|certificate is not yet valid/i,sev:'crit',cat:'Certificados',t:'Certificado expirado ou ainda não válido',w:'Algum certificado usado pelo cliente está fora da validade — muitas vezes é relógio do sistema errado.',a:'Corrija data/hora (NTP). Se persistir, force re-registro do usuário para baixar novo certificado.'},
+{id:'p407',re:/\b407\b|Proxy Authentication Required/i,sev:'crit',cat:'Conectividade',t:'Proxy exigindo autenticação',w:'Há um proxy no caminho pedindo credenciais; o cliente não consegue chegar ao tenant.',a:'Configure bypass do proxy para os domínios Netskope (*.goskope.com) ou habilite suporte a proxy autenticado na configuração do cliente.'},
+{id:'timeout',re:/code 28,|Timeout was reached|Operation timed out/i,sevf:byCount('warn','crit',10),cat:'Conectividade',t:'Timeouts ao falar com o tenant Netskope',w:'Requisições HTTPS do cliente (download de configuração, listas de exceção, GSLB, status) não responderam a tempo.',a:'Teste saída 443 para o tenant e *.goskope.com; verifique firewall/proxy local e DNS. Se coincide com reinício do serviço ou troca de rede, pode ser transitório — confira na linha do tempo.'},
+{id:'dns',re:/code 6,|Could not resolve host|getaddrinfo failed|DNS resolution failed/i,sevf:byCount('warn','crit',5),cat:'Conectividade',t:'Falhas de resolução DNS',w:'O cliente não conseguiu resolver o nome do tenant/gateway. Geralmente o sistema está usando um DNS que não responde (ex.: DNS interno herdado de uma VPN desconectada).',a:'Veja os servidores DNS ativos (nmcli dev show / ipconfig /all / scutil --dns). Remova interfaces de VPN órfãs e teste nslookup do tenant .goskope.com.'},
+{id:'conn',re:/code 7,|Couldn't connect to server|Connection refused|Network is unreachable|No route to host/i,sevf:byCount('warn','crit',10),cat:'Conectividade',t:'Conexão recusada ou rede inalcançável',w:'Não foi possível abrir conexão TCP com o destino.',a:'Verifique rota padrão, firewall local e se outra VPN está capturando o tráfego.'},
+{id:'http',re:/Got HTTP response code: (4\d\d|5\d\d)|code 22, error HTTP response code said error/,sev:'warn',cat:'Conectividade',t:'Tenant respondeu com erro HTTP',w:'O tenant recusou a requisição (403 = usuário/dispositivo não autorizado ou token inválido; 401 = autenticação; 5xx = erro do lado Netskope).',a:'Confirme que o usuário está provisionado no tenant e no grupo correto; em 403 recorrente, refaça o registro (enroll) do cliente.'},
+{id:'cfgdl',re:/Failed to download (config|admin config|steering|ca cert|tenant cert|exception list)|download (steering config|ca cert|tenant cert) failed|failed to download (admin )?config|mandatory config download failed/i,sevf:byCount('warn','crit',6),cat:'Configuração',t:'Falha ao baixar configuração do tenant',w:'O cliente não conseguiu atualizar a configuração (steering, exceções, políticas). Ele continua com a última configuração conhecida.',a:'Normalmente é consequência dos timeouts/DNS acima. Resolva a conectividade e use “Update Configuration” no cliente.'},
+{id:'restapi',re:/restapi Failed to (?:download|post) ([^,]+?)\s*,? ?Error|addonmanapi Failed to download (.+)$/,sev:'warn',cat:'Configuração',t:'Chamadas de API ao tenant falharam',w:'Downloads ou envios específicos ao tenant falharam (listas de bypass, exceções, domínios, status).',a:'Consequência de conectividade. Veja quais itens falharam abaixo e se houve sucesso depois.'},
+{id:'bypasscat',re:/Failed to download bypass category list|Failed to download Category Bypass/i,sev:'warn',cat:'Configuração',t:'Lista de bypass por categoria não foi baixada',w:'Sem essa lista, categorias que deveriam ir direto podem ser enviadas ao proxy.',a:'Após corrigir a conectividade, atualize a configuração do cliente.'},
+{id:'gslb',re:/GSLB fetch failed|Failed to download NSClient-gslb|Failed to download NPA-gslb/i,sev:'warn',cat:'Conectividade',t:'Falha na seleção automática de gateway (GSLB)',w:'O cliente não conseguiu obter a lista de POPs mais próximos; pode conectar num POP mais distante (latência maior).',a:'Verifique acesso a gslb/achecker do tenant. Confira o POP escolhido e a latência no resumo.'},
+{id:'tundown',any:1,re:/event: Tunnel Down|onTunnelDisconnected/,sevf:byCount('warn','crit',4),cat:'Túnel',t:'Quedas do túnel',w:'O túnel (Internet/SWG ou Private Access/NPA) foi desconectado. Pode ser troca de rede, suspensão, reinício do serviço ou falha de comunicação.',a:'Compare com a linha do tempo: se há queda sem parada de serviço ou troca de rede, investigue estabilidade da rede/Wi-Fi e conflitos com outra VPN.'},
+{id:'userdis',any:1,re:/event: User Disabled/,sev:'warn',cat:'Túnel',t:'Cliente desabilitado manualmente pelo usuário',w:'O próprio usuário desligou o Netskope Client. Enquanto desabilitado o tráfego não passa pela inspeção (ou é bloqueado, se fail-close estiver ativo).',a:'Pergunte ao usuário o motivo (algo deixou de funcionar?). Considere proibir a desativação (allowClientDisabling) no perfil de configuração.'},
+{id:'restart',any:1,re:/Service is stopping/,sevf:byCount('info','warn',2),cat:'Estabilidade',t:'Serviço do Netskope parado/reiniciado',w:'O serviço stAgentSvc recebeu sinal de parada (systemd/SCM). Pode ser reinício manual, atualização, desligamento ou reinstalação.',a:'Se não foi intencional, verifique atualizações automáticas, scripts de gestão e o histórico de instalação.'},
+{id:'npagw',re:/Connection to GW .*(terminated|failed)|keepAlive fails/i,sev:'warn',cat:'Túnel',t:'Conexão do Private Access (NPA) com o gateway caiu',w:'O túnel NPA perdeu a conexão com gateway.npa.goskope.com (keepalive sem resposta).',a:'Normalmente reconecta sozinho. Se recorrente, verifique estabilidade da rede, MTU e se outra VPN altera rotas.'},
+{id:'route',re:/ip(Route|Rule)(Get|Del|Add)\w*: failed/,sevf:byCount('info','warn',50),cat:'Rede',t:'Falhas em consultas à tabela de rotas (netlink)',w:'O cliente pediu ao kernel a rota para destinos e não recebeu resposta. Volume alto costuma indicar tabela de rotas alterada por outra VPN ou interfaces em estado inconsistente.',a:'Revise interfaces de VPN de terceiros e rotas (ip route / route print). Em volume baixo é inofensivo.'},
+{id:'driver',re:/Failed to (start|load|install|open) (the )?(driver|filter|stadrv|nsfilter)|WFP .*fail/i,sev:'crit',cat:'Sistema',t:'Falha no driver de captura de tráfego',w:'O componente que intercepta o tráfego não iniciou; o túnel não captura nada.',a:'Reinstale o cliente com privilégios de administrador; verifique conflitos com antivírus/EDR e outra VPN.'},
+{id:'iptables',re:/iptables.*(fail|error)|Failed to (add|set|apply) iptables/i,sev:'warn',cat:'Rede',t:'Falha ao aplicar regras iptables',w:'No Linux o cliente usa iptables para direcionar tráfego; regras não aplicadas impedem a captura.',a:'Verifique se outro software (firewall, Docker, FortiClient) está reescrevendo as regras.'},
+{id:'firefox',re:/firefox|FF Snap/i,sev:'warn',cat:'Certificados',t:'CA do Netskope não instalada para o Firefox',w:'O cliente não conseguiu copiar a CA para o Firefox (versão snap). Sites inspecionados podem mostrar erro de certificado no Firefox.',a:'Importe a CA do Netskope (nscacert.crt e nstenantcert.crt) no Firefox ou use política corporativa (ImportEnterpriseRoots). Chrome não é afetado.'},
+{id:'ipc',re:/NSCOM2 .*(not running|connect failed|Connection closed)|disconnected by service|startServerMessagePump/,sev:'info',cat:'Estabilidade',t:'Interface perdeu comunicação com o serviço',w:'A interface gráfica (stAgentUI/stAgentApp) ficou sem falar com o serviço. É esperado durante reinícios do serviço.',a:'Se acontecer sem reinício do serviço, reinicie o serviço e verifique se o stAgentSvc está rodando.'},
+{id:'upn',re:/UPN enroll|branding file using UPN/,sev:'info',cat:'Provisionamento',t:'Registro por UPN não concluído',w:'O cliente tentou se registrar usando o UPN do usuário e não tinha informações suficientes; outro método foi usado.',a:'Só é problema se o registro final falhou. Confira se houve evento “Registrado (enroll)”.'},
+{id:'clientstatus',re:/Failed to post client status|Failed to post Client status/i,sev:'info',cat:'Configuração',t:'Status do dispositivo não foi enviado ao console',w:'O console pode mostrar status desatualizado deste dispositivo.',a:'Consequência de conectividade; é reenviado depois automaticamente.'},
+{id:'dem',re:/DEM .*fail/i,sev:'info',cat:'Configuração',t:'Falha no envio de dados de DEM',w:'Monitoramento de experiência digital não enviou status.',a:'Sem impacto no tráfego.'},
+{id:'npawait',re:/cannot be completed within \d+ ms/,sev:'info',cat:'Túnel',t:'Lentidão interna do módulo NPA',w:'Uma operação interna do Private Access demorou além do esperado.',a:'Sem ação se isolado; recorrente pode indicar CPU alta.'},
+{id:'broker',re:/No Primary broker configured/,sev:'info',cat:'Túnel',t:'Nenhum broker NPA primário configurado',w:'Mensagem de seleção de gateway do NPA; o cliente usa a lista do GSLB.',a:'Sem ação, a menos que o NPA não conecte.'},
+{id:'bwan',re:/bwan|Bwan/,sev:'noise',cat:'Ruído',t:'Módulo SD-WAN ausente',w:'Mensagens do Endpoint SD-WAN (bwanclient). Esperado quando o SD-WAN não está instalado/em uso.',a:'Nenhuma.'},
+{id:'perm',re:/err: 13|Permission denied/,sev:'info',cat:'Sistema',t:'Permissão negada ao gravar arquivo',w:'Algum processo do usuário tentou gravar em pasta protegida.',a:'Veja o arquivo citado nos exemplos. Se for do módulo SD-WAN (bwan) é inofensivo.'},
+/* noise */
+{id:'decrypt',re:/Invalid decryption of protected file|decrypt file failed|nsEncryption invalid parameters/,sev:'noise',cat:'Ruído',t:'Arquivos protegidos ainda não criados',w:'Comum na inicialização e antes do registro: o arquivo criptografado ainda não existe.',a:'Só preocupa se aparecer continuamente após o registro, junto com falha de túnel — nesse caso reinstale o cliente.'},
+{id:'prereg',re:/branding file|Failed to read user certificate|failed to read (file|from backup file|steering config|exception list|category list|tenant cert|ca cert)|nsgw info not available|eventCache failed to read|cannot open file .*provisioning|failed to open file for reading|Failed to read [\w. ]+ file|failed to read bypass list/i,sev:'noise',cat:'Ruído',t:'Leituras de configuração antes do registro',w:'Na primeira execução (ou logo após reinstalar) os arquivos de configuração ainda não existem.',a:'Nenhuma, se o registro foi concluído depois.'},
+{id:'fips',re:/getFipsConfigPath|FIPS/,sev:'noise',cat:'Ruído',t:'FIPS não suportado na plataforma',w:'Mensagem padrão em Linux/macOS.',a:'Nenhuma.'},
+{id:'ipv6',re:/IPv6 next header is not/,sev:'noise',cat:'Ruído',t:'Pacote IPv6 ignorado',w:'Pacotes ICMPv6/extensões não são tunelados.',a:'Nenhuma.'},
+{id:'session',re:/Can not find session|Can't find NPA tunnel|No tunnel found|Tunnel is deleted or marked|SessId \[\d+\] No found|Failed to get Active User Session ID|Failed to get session details|Cannot get (status|reauth)|dispatcher is stopped/,sev:'noise',cat:'Ruído',t:'Sessão/túnel ainda não disponível',w:'Mensagens transitórias durante criação ou remoção de túnel.',a:'Nenhuma.'},
+{id:'misc',re:/unknown message ID|npaCertRefTime|npaDnsCache|Invalid tunnel status: \d+|Failed to read pid file|No FQDN for client On-prem|using preload user cert|RTT getsockopt|Token not found in the client name|IdPProvisioning|cannot get linux key|no cert check rule|SetDeviceOption .* ignored|packet filter is already enabled|read_json failed|query device tags API|supportability params|addon host is empty|Failed to download device id|Failed to download overlapping|Failed to download tunnel policy|proc is not running/,sev:'noise',cat:'Ruído',t:'Mensagens internas conhecidas',w:'Mensagens de diagnóstico interno comuns em clientes saudáveis.',a:'Nenhuma.'}
+];
+const ANY=RULES.filter(r=>r.any);
+/* ---------- resolution knowledge base (docs.netskope.com + community.netskope.com, consultado em nov/2026) ---------- */
+const REF={
+ trouble:['Guia de troubleshooting do Netskope Client','https://docs.netskope.com/en/netskope-client-troubleshooting-guide'],
+ netcfg:['Requisitos de rede do cliente (domínios e portas)','https://docs.netskope.com/en/netskope-client-network-configuration'],
+ fw:['Verificar política de firewall','https://docs.netskope.com/en/check-firewall-policy'],
+ cmd:['Referência de comandos nsdiag','https://docs.netskope.com/pt/netskope-client-command-reference'],
+ interop:['Interoperabilidade com softwares de terceiros','https://docs.netskope.com/en/netskope-client-interoperability/'],
+ vpnexc:['Exceções de steering para aplicações VPN','https://docs.netskope.com/en/exception-configuration-for-vpn-applications'],
+ forti:['FortiGate VPN + Netskope (boas práticas)','https://docs.netskope.com/en/fortigate-vpn'],
+ linux:['Netskope Client para Linux','https://docs.netskope.com/en/netskope-client-for-linux'],
+ ubuntu:['Instalação no Ubuntu (Comunidade)','https://community.netskope.com/netskope-client-87/netskope-client-installation-on-ubuntu-linux-7705'],
+ certs:['Certificados (download das CAs)','https://docs.netskope.com/en/certificates'],
+ certerr:['Gerenciando erros de certificado (Comunidade)','https://community.netskope.com/inside-netskope-22/managing-certificate-errors-with-netskope-client-7999'],
+ devtools:['Ferramentas CLI e inspeção SSL','https://docs.netskope.com/en/netskope-help/data-security/netskope-secure-web-gateway/configuring-cli-based-tools-and-development-frameworks-to-work-with-netskope-ssl-interception/'],
+ bypass:['Adicionar bypasses no Netskope','https://docs.netskope.com/en/add-bypasses-in-netskope'],
+ exceptions:['Adicionar exceções de steering','https://docs.netskope.com/en/adding-exceptions'],
+ npagen:['Private Access: troubleshooting geral','https://docs.netskope.com/en/general-troubleshooting-methods'],
+ npatool:['NPA Troubleshooter Tool','https://docs.netskope.com/en/the-npa-troubleshooter-tool'],
+ npastatus:['Status de dispositivo do Private Access','https://docs.netskope.com/en/what-do-the-private-access-device-status-types-mean'],
+ clientcfg:['Configuração do cliente (Client Configuration)','https://docs.netskope.com/en/netskope-client-configuration/'],
+ tamper:['Configurar o cliente / Tamperproof','https://docs.netskope.com/en/configure-netskope-client-settings'],
+ disable:['Formas de desabilitar o túnel (Comunidade)','https://community.netskope.com/netskope-client-87/different-ways-to-disable-the-netskope-internet-access-tunnel-swg-8547'],
+ debug:['Modo de debug do cliente','https://docs.netskope.com/en/netskope-client-debug-mode'],
+ using:['Usando o Netskope Client','https://docs.netskope.com/en/using-netskope-client'],
+ common:['Problemas comuns do cliente (Comunidade)','https://community.netskope.com/inside-netskope-22/identify-troubleshoot-and-resolve-common-netskope-client-related-issues-7571']
+};
+const DOMS='addon-{T}.goskope.com, gateway-{T}.goskope.com, achecker-{T}.goskope.com, download-{T}.goskope.com, nsauth-{T}.goskope.com, gateway.gslb.goskope.com, gateway.npa.goskope.com, enrollment.goskope.com e dns.google';
+const RESTART={linux:['Reinicie o serviço:','sudo systemctl stop stagentd.service\nsudo systemctl start stagentd.service'],windows:['Reinicie o serviço (com “Protect Client configuration and resources” desativado na Client Configuration), em prompt de administrador:','stagentsvc -stop\nstagentsvc -start'],mac:['No macOS Big Sur ou mais novo não há comando: desabilite e reabilite o cliente pelo ícone.']};
+const FIX={
+timeout:{kq:'curl_easy_perform failed code 28 Timeout was reached',refs:['netcfg','fw','cmd'],fx:{
+ all:[['Libere no firewall/proxy, sem inspeção SSL, TCP 443 para: '+DOMS+'.']],
+ linux:[['Teste se o tenant responde (deve voltar um código HTTP, não timeout):','curl -sv -o /dev/null https://addon-{T}.goskope.com'],['Meça os tempos com o próprio cliente:','{NSD} -r https://addon-{T}.goskope.com']],
+ windows:[['Teste se o tenant responde (PowerShell ou cmd):','curl.exe -sv -o NUL https://addon-{T}.goskope.com'],['Meça os tempos com o próprio cliente:','{NSD} -r https://addon-{T}.goskope.com']],
+ mac:[['Teste se o tenant responde:','curl -sv -o /dev/null https://addon-{T}.goskope.com'],['Meça os tempos com o próprio cliente:','{NSD} -r https://addon-{T}.goskope.com']],
+ end:[['Se houver outra VPN conectada ou interfaces de VPN órfãs (veja os itens de Rede/Conflito), resolva isso primeiro.'],['Depois, force a atualização da configuração e confira o status do túnel:','{NSD} -u\n{NSD} -f']]}},
+dns:{kq:'Could not resolve hostname DNS',refs:['netcfg','npagen'],fx:{
+ linux:[['Veja qual DNS cada interface está usando:','resolvectl status'],['Teste a resolução do tenant:','resolvectl query addon-{T}.goskope.com'],['Se aparecer DNS de uma VPN desconectada, remova a interface/perfil dessa VPN e limpe o cache:','sudo resolvectl flush-caches']],
+ windows:[['Veja os DNS de cada adaptador:','ipconfig /all'],['Teste a resolução do tenant:','nslookup addon-{T}.goskope.com'],['Remova adaptadores de VPN que ficaram com DNS e limpe o cache:','ipconfig /flushdns']],
+ mac:[['Veja a ordem de resolvedores:','scutil --dns'],['Teste a resolução do tenant:','nslookup addon-{T}.goskope.com'],['Limpe o cache:','sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder']],
+ end:[['Garanta UDP/53 para o resolvedor e TCP 443 para dns.google — o cliente usa dns.google para escolher o POP e cai para o DNS local se estiver bloqueado.'],['Depois:','{NSD} -u']]}},
+conn:{kq:'Couldn\'t connect to server Connection refused',refs:['netcfg','fw'],fx:{
+ linux:[['Confira a rota padrão e se alguma VPN está capturando o tráfego:','ip route\nip -br link']],windows:[['Confira a rota padrão:','route print']],mac:[['Confira a rota padrão:','netstat -rn']],
+ end:[['Libere TCP 443 de saída para '+DOMS+'.'],['Valide:','{NSD} -f']]}},
+ssl:{kq:'SSL certificate problem goskope',refs:['netcfg','certerr','bypass'],fx:{
+ linux:[['Confira data, hora e NTP:','timedatectl']],windows:[['Confira data, hora e NTP:','w32tm /query /status']],mac:[['Confira data e hora em Ajustes > Geral > Data e Hora.']],
+ end:[['Veja quem assina o certificado do tenant — deve ser uma CA pública, não o seu firewall/proxy:','openssl s_client -connect addon-{T}.goskope.com:443 -servername addon-{T}.goskope.com </dev/null | openssl x509 -noout -issuer'],['Se o emissor for o firewall/proxy/antivírus da empresa, crie nele uma regra de “não descriptografar” para *.goskope.com (a documentação exige essas conexões sem decriptação).']]}},
+certexp:{kq:'certificate expired Netskope client',refs:['trouble','certs'],fx:{
+ linux:[['Sincronize o relógio:','timedatectl\nsudo timedatectl set-ntp true']],windows:[['Sincronize o relógio (admin):','w32tm /resync']],
+ end:[['Se o relógio estiver certo, refaça o registro do cliente para baixar novos certificados.']]}},
+p407:{kq:'proxy authentication 407 Netskope client',refs:['netcfg','bypass'],fx:{all:[['No proxy corporativo, isente de autenticação e de decriptação os domínios *.goskope.com (ou ao menos '+DOMS+').'],['Depois atualize a configuração:','{NSD} -u']]}},
+http:{kq:'Netskope client HTTP 403 enrollment',refs:['trouble','using'],fx:{all:[['No console: Settings > Security Cloud Platform > Devices — procure o usuário e confira se o dispositivo aparece e está ativo.'],['Confira se o usuário está provisionado (SCIM/AD) e no grupo/OU coberto pela Client Configuration e pela Steering Configuration.'],['Se o 403 persistir, refaça o registro: desinstale e reinstale o cliente com um novo convite.']],
+ linux:[['Desinstalar no Linux:','sudo /opt/netskope/stagent/uninstall.sh']]}},
+cfgdl:{kq:'failed to download config Netskope client',refs:['using','cmd','netcfg'],fx:{all:[['É quase sempre consequência dos timeouts/DNS: resolva esses itens primeiro.'],['Force a atualização e veja a data de “Config Updated” em ícone > Configuration:','{NSD} -u\n{NSD} -f']]}},
+restapi:{kq:'restapi Failed to download Error -2',refs:['netcfg','cmd'],fx:{all:[['Os itens listados em “Detalhe” são as listas que não foram baixadas. Resolva a conectividade (addon-{T}.goskope.com) e force a atualização:','{NSD} -u']]}},
+bypasscat:{kq:'Failed to download bypass category list',refs:['bypass','exceptions'],fx:{all:[['Corrija a conectividade e rode:','{NSD} -u'],['Confirme no console (Steering Configuration > Exceptions) que as categorias de bypass estão corretas.']]}},
+gslb:{kq:'GSLB fetch failed Netskope',refs:['netcfg','cmd'],fx:{all:[['Libere TCP 443 para gateway.gslb.goskope.com e dns.google.'],['Veja o POP e o gateway em uso:','{NSD} -f'],['Se o POP estiver errado ou lento, fixe temporariamente e depois volte ao automático:','{NSD} --pin pop=BR-SAO1\n{NSD} --unpin']]}},
+tundown:{kq:'Netskope client tunnel down disconnect',refs:['trouble','debug','interop'],fx:{all:[['Compare com a linha do tempo: queda logo após “Serviço parado”, troca de rede ou suspensão é esperada.'],['Se as quedas forem aleatórias, ative o modo debug, reproduza e colete o pacote para o suporte:','{NSD} -b start\n# reproduza o problema\n{NSD} -b stop\n{NSD} -o netskope-logs.zip'],['Elimine conflitos com outras VPNs (veja o item de Conflito, se houver).']]}},
+userdis:{kq:'allow disabling of clients tamperproof',refs:['tamper','disable','clientcfg'],fx:{all:[['Peça ao usuário para reabilitar pelo ícone (Enable Netskope Client) ou rode:','{NSD} -t enable'],['Pergunte o que motivou a desativação — geralmente é um site/app que quebrou; trate com exceção ou bypass em vez de desligar o cliente.'],['Para impedir: Settings > Security Cloud Platform > Netskope Client > Client Configuration > Tamperproof > desmarque “Allow disabling of Clients” (ou exija senha mestra / reabilitação automática).']]}},
+restart:{kq:'stagentd service stopping restart',refs:['trouble','clientcfg'],fx:{
+ linux:[['Veja quem parou o serviço:','systemctl status stagentd.service\njournalctl -u stagentd.service --since today']],windows:[['Veja o estado do serviço:','sc query stagentsvc']],
+ end:[['Confira em Client Configuration se atualização automática (Software Update / golden release) está ativa — reinícios coincidem com atualizações.']]}},
+npagw:{kq:'Connection to GW gateway.npa.goskope.com terminated',refs:['npagen','npatool','npastatus'],fx:{all:[['Veja o status do Private Access:','{NSD} -n'],['Libere TCP 443 para gateway.npa.goskope.com, *.npa.goskope.com e nsauth-{T}.goskope.com.'],['No console, use o NPA Troubleshooter (Private Access > Troubleshooter) com usuário e app privado.']],
+ linux:[['Em VMs clonadas, o NPA cai porque o machine-id é duplicado. Regere (procedimento oficial):','sudo systemctl stop stagentd.service\nsudo rm /opt/netskope/stagent/data/npaccesscert.pem /opt/netskope/stagent/data/npaccesskey.pem /opt/netskope/stagent/data/npatenantcert.pem\nsudo rm /etc/machine-id /var/lib/dbus/machine-id\nsudo dbus-uuidgen --ensure\nsudo systemd-machine-id-setup\nsudo reboot']]}},
+route:{kq:'nsRtNetlink ipRouteGet failed',refs:['interop','vpnexc'],fx:{linux:[['Veja rotas e interfaces de VPN:','ip route\nip -br link']],windows:[['Veja as rotas:','route print']],all:[['Remova interfaces de VPN órfãs e evite duas VPNs em túnel completo ao mesmo tempo.']]}},
+driver:{kq:'Netskope client driver failed to start',refs:['trouble','interop'],fx:{all:[['Reinstale o cliente como administrador.'],['Verifique se antivírus/EDR bloqueou o driver e crie exclusão para o Netskope.'],['Colete log do driver:','{NSD} -d start\n# reproduza\n{NSD} -d stop']]}},
+iptables:{kq:'Netskope Linux iptables',refs:['linux'],fx:{linux:[['O cliente Linux exige iptables. Confira se está instalado e se outro firewall não reescreve as regras:','sudo iptables -S | head -40'],RESTART.linux]}},
+firefox:{kq:'Firefox certificate Netskope Linux snap',refs:['certs','devtools','ubuntu'],fx:{
+ linux:[['Instale o certutil:','sudo apt install libnss3-tools'],['Importe as CAs do Netskope em todos os perfis do Firefox snap:','for d in ~/snap/firefox/common/.mozilla/firefox/*.default*; do\n  certutil -A -n "Netskope CA" -t "C,," -i /usr/local/share/ca-certificates/nscacert.crt -d sql:"$d"\n  certutil -A -n "Netskope Tenant CA" -t "C,," -i /usr/local/share/ca-certificates/nstenantcert.crt -d sql:"$d"\ndone'],['Reinicie o Firefox. Alternativa manual: Configurações > Privacidade e Segurança > Certificados > Ver certificados > Autoridades > Importar, marcando “Confiar nesta CA para identificar sites”.']],
+ windows:[['No Firefox, abra about:config e defina security.enterprise_roots.enabled = true (usa as CAs do Windows, onde o Netskope já instalou a sua).']],mac:[['No Firefox, abra about:config e defina security.enterprise_roots.enabled = true.']]}},
+ipc:{kq:'NSCOM2 disconnected by service',refs:['trouble'],fx:{linux:[RESTART.linux],windows:[RESTART.windows],mac:[RESTART.mac]}},
+upn:{kq:'UPN enrollment Netskope client',refs:['using'],fx:{all:[['Sem ação se houve o evento “Registrado (enroll)”. Caso contrário, confira o UPN do usuário no IdP/AD e o método de instalação.']]}},
+clientstatus:{kq:'Failed to post client status',refs:['netcfg'],fx:{all:[['Sem ação: é reenviado sozinho quando a conectividade volta.']]}},
+dem:{kq:'DEM client status failure',refs:['trouble'],fx:{all:[['Sem impacto no tráfego.']]}},
+npawait:{kq:'NPA dispatcher timeout',refs:['npagen'],fx:{all:[['Sem ação se isolado. Se recorrente, verifique uso de CPU do stAgentSvc.']]}},
+broker:{kq:'No Primary broker configured NPA',refs:['npagen'],fx:{all:[['Sem ação, a menos que o Private Access não conecte.']]}},
+perm:{kq:'Netskope permission denied err 13',refs:['trouble'],fx:{all:[['Veja o arquivo citado nos exemplos; se for do módulo bwan (SD-WAN) é inofensivo.']]}},
+orphan:{kq:'Netskope FortiClient VPN DNS conflict',refs:['interop','vpnexc','forti'],fx:{
+ linux:[['Confirme as interfaces e o DNS que elas injetam:','ip -br link | grep -iE "fctvpn|tun|ppp|wg"\nresolvectl status'],['Remova as interfaces órfãs:','{DELIF}'],['Limpe o cache de DNS e atualize o Netskope:','sudo resolvectl flush-caches\n{NSD} -u']],
+ windows:[['Liste adaptadores e DNS:','ipconfig /all'],['Desconecte a VPN de terceiros e desabilite/remova adaptadores virtuais que ficaram ativos sem conexão; depois:','ipconfig /flushdns\n{NSD} -u']],
+ end:[['Se o usuário já migrou para o Netskope, desinstale a VPN antiga para que as interfaces não voltem no próximo boot.']]}},
+conflict:{kq:'Netskope client coexist third party VPN',refs:['vpnexc','forti','interop'],fx:{all:[['Se a VPN antiga ainda for necessária: no console, crie um Network Location com o IP/FQDN do gateway VPN (Policies > Profiles > Network Location) e adicione uma exceção “Destination Location” na Steering Configuration (aba Exceptions).'],['No FortiGate, prefira split tunnel e evite VPN em túnel completo junto com o Netskope.'],['Se a migração deste usuário já terminou, desinstale a VPN antiga.']],
+ linux:[['Remover o FortiClient (Ubuntu/Debian):','sudo apt remove forticlient']],windows:[['Remova pelo Painel de Controle > Programas e Recursos e reinicie.']]}},
+deps:{kq:'Netskope client Linux dependencies install',refs:['linux','ubuntu'],fx:{linux:[['Instale as dependências ausentes e reinicie o cliente:','sudo apt install {MISSING}'],RESTART.linux]}},
+version:{kq:'Netskope client golden release version',refs:['clientcfg'],fx:{all:[['Confira em Client Configuration > Software Update qual versão (golden release) o tenant distribui e se a atual é a esperada.'],['Versão em execução:','{NSD} -v']]}},
+failclose:{kq:'Netskope fail close client disabled',refs:['disable','tamper'],fx:{all:[['Reabilite o cliente:','{NSD} -t enable']]}},
+decrypt:{kq:'Invalid decryption of protected file',refs:['trouble'],fx:{all:[['Nenhuma ação, se o registro foi concluído. Se o erro continuar após o registro e o túnel não subir, reinstale o cliente.']]}}
+};
+const NSD={linux:'sudo /opt/netskope/stagent/nsdiag',windows:'"C:\\Program Files\\Netskope\\STAgent\\nsdiag.exe"',mac:'sudo "/Library/Application Support/Netskope/STAgent/nsdiag"'};
+const OSL={linux:'Linux',windows:'Windows',mac:'macOS'};
+function detectOS(){const s=((S.facts.osName||'')+' '+(S.facts.os||'')).toLowerCase();if(/windows/.test(s))return 'windows';if(/mac|darwin/.test(s))return 'mac';if(/linux|ubuntu|debian|red ?hat|mint|fedora/.test(s))return 'linux';if(S.files.some(f=>/stagentsvc\.exe|C:\\/i.test(f.name)))return 'windows';return null}
+function subst(t,os,f){return t.replace(/\{NSD\}/g,NSD[os||'linux']).replace(/\{T\}/g,S.facts.tenantHost||'<tenant>').replace(/\{DELIF\}/g,(f&&f.ifs||[]).map(n=>'sudo ip link delete '+n).join('\n')||'sudo ip link delete <interface>').replace(/\{MISSING\}/g,(f&&f.missing||[]).join(' ')||'<pacotes>')}
+function stepsFor(key,f){
+ const d=FIX[key];if(!d)return [];const os=detectOS();const fx=d.fx;let out=[...(fx.all||[])];
+ if(os){out=out.concat(fx[os]||[])}else{for(const o of ['linux','windows','mac'])if(fx[o])out=out.concat(fx[o].map(s=>['('+OSL[o]+') '+s[0],s[1]]))}
+ out=out.concat(fx.end||[]);return out.map(s=>[subst(s[0],os,f),s[1]?subst(s[1],os,f):null]);
+}
+function searchLinks(q){const e=encodeURIComponent;return [['Docs Netskope','https://www.google.com/search?q='+e('site:docs.netskope.com '+q)],['Comunidade','https://www.google.com/search?q='+e('site:community.netskope.com '+q)],['Base de conhecimento (login)','https://support.netskope.com/hc/en-us/search?query='+e(q)],['Web','https://www.google.com/search?q='+e('Netskope client '+q)]]}
+
+
+const CONFLICT=[
+ {n:'FortiClient',re:/forticlient|fctsched|fortitray|FortiSSLVPN|fctvpn/i},
+ {n:'Zscaler',re:/zscaler|ZSATunnel|ZSAService/i},
+ {n:'GlobalProtect',re:/PanGPS|PanGPA|globalprotect/i},
+ {n:'Cisco Secure Client/AnyConnect',re:/vpnagentd|anyconnect|csc_ui/i},
+ {n:'OpenVPN',re:/openvpn/i},{n:'WireGuard',re:/wg-quick|wireguard/i},
+ {n:'Tailscale',re:/tailscaled/i},{n:'Cloudflare WARP',re:/warp-svc/i},
+ {n:'Check Point VPN',re:/TracSrvWrapper|trac\.exe|cpda/i},{n:'Pulse/Ivanti Secure',re:/pulsesecure|dsAccessService/i}
+];
+const VPNIF=/^(fctvpn|ppp\d|tun\d|wg\d|utun|tailscale|cscotun|gpd\d|zcctun|CloudflareWARP)/i;
+
+/* ---------- state ---------- */
+let S;
+function reset(){S={files:[],entries:[],events:[],find:new Map(),unc:new Map(),json:{},facts:{},extra:[],skipped:[],state:{},lastLoc:null,minT:Infinity,maxT:-Infinity}}
+
+/* ---------- zip ---------- */
+async function inflate(u8){return new Uint8Array(await new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer())}
+async function unzip(buf,prefix,out){
+ const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength),L=buf.length;
+ let e=-1;for(let i=L-22;i>=Math.max(0,L-65557);i--){if(dv.getUint32(i,true)===0x06054b50){e=i;break}}
+ if(e<0)throw new Error('ZIP inválido');
+ let cnt=dv.getUint16(e+10,true),off=dv.getUint32(e+16,true);
+ if(off===0xffffffff&&e>=20&&dv.getUint32(e-20,true)===0x07064b50){const z=Number(dv.getBigUint64(e-12,true));cnt=Number(dv.getBigUint64(z+32,true));off=Number(dv.getBigUint64(z+48,true))}
+ for(let k=0;k<cnt;k++){
+  if(dv.getUint32(off,true)!==0x02014b50)break;
+  const m=dv.getUint16(off+10,true);let cs=dv.getUint32(off+20,true),us=dv.getUint32(off+24,true);
+  const nl=dv.getUint16(off+28,true),el=dv.getUint16(off+30,true),cl=dv.getUint16(off+32,true);let lo=dv.getUint32(off+42,true);
+  const name=new TextDecoder().decode(buf.subarray(off+46,off+46+nl));
+  let x=off+46+nl;const xe=x+el;
+  while(x+4<=xe){const id=dv.getUint16(x,true),sz=dv.getUint16(x+2,true);if(id===1){let p=x+4;if(us===0xffffffff){us=Number(dv.getBigUint64(p,true));p+=8}if(cs===0xffffffff){cs=Number(dv.getBigUint64(p,true));p+=8}if(lo===0xffffffff){lo=Number(dv.getBigUint64(p,true))}}x+=4+sz}
+  off+=46+nl+el+cl;
+  if(name.endsWith('/'))continue;
+  const ds=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true);
+  const raw=buf.subarray(ds,ds+cs);
+  let data;try{data=m===0?raw:m===8?await inflate(raw):null}catch(err){data=null}
+  const full=prefix+name;
+  if(!data){S.skipped.push(full+' (compressão não suportada)');continue}
+  if(/\.zip$/i.test(name)){try{await unzip(data,full+'/',out)}catch(err){S.skipped.push(full)}continue}
+  out.push({name:full,data});
+ }
+}
+
+/* ---------- parsing ---------- */
+const RA=/^(\d{4})[\/-](\d\d)[\/-](\d\d)[ T](\d\d):(\d\d):(\d\d)(?:[.,](\d+))?\s+(\S+)\s+p(\w+)\s+t(\w+)\s+(\w+)\s+(\S+)\s?(.*)$/;
+const RB=/^\[(?:[^\]]*?:)?(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d):(\d\d)(?:\.(\d+))?[^\]]*\]\s+t(\w+)\s+\[(\w+)\]\s+(\S+)\s?(.*)$/;
+const normLvl=l=>{l=l.toLowerCase();return l.startsWith('err')?'error':l.startsWith('warn')?'warn':(l==='critical'||l==='fatal'||l==='crit')?'critical':l==='debug'||l==='trace'?'debug':l==='info'?'info':null};
+const ts=(a)=>Date.UTC(+a[0],+a[1]-1,+a[2],+a[3],+a[4],+a[5],a[6]?+(a[6]+'00').slice(0,3):0);
+const fmtT=ms=>{if(!isFinite(ms))return '—';const d=new Date(ms),p=n=>String(n).padStart(2,'0');return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`};
+const normMsg=m=>m.replace(/0x[0-9a-f]+/gi,'#').replace(/\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b/g,'<ip>').replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,'<id>').replace(/\d+/g,'#').slice(0,220);
+
+function decode(u8,name){
+ if(u8[0]===0xFF&&u8[1]===0xFE)return new TextDecoder('utf-16le').decode(u8);
+ if(u8[0]===0xFE&&u8[1]===0xFF)return new TextDecoder('utf-16be').decode(u8);
+ let z=0;for(let i=0;i<Math.min(u8.length,4096);i++)if(u8[i]===0)z++;
+ if(z>40){if(u8.length>1&&u8[1]===0&&u8[0]!==0)return new TextDecoder('utf-16le').decode(u8);return null}
+ return new TextDecoder('utf-8').decode(u8);
+}
+
+function addEvent(ms,label,color,detail,file){S.events.push({ms,label,color,detail,file})}
+function hit(r,fi,e,line){
+ let f=S.find.get(r.id);if(!f){f={r,count:0,first:Infinity,last:-Infinity,files:new Set(),samples:[],caps:new Map()};S.find.set(r.id,f)}
+ f.count++;if(e.ms<f.first)f.first=e.ms;if(e.ms>f.last)f.last=e.ms;f.files.add(S.files[fi].name);
+ if(f.samples.length<6)f.samples.push(S.files[fi].base+': '+line);
+ const m=r.re.exec(e.msg);const c=m&&r.id==='restapi'?(m[1]||m[2]):null;
+ if(r.id==='http'&&m&&m[1])f.caps.set('HTTP '+m[1],(f.caps.get('HTTP '+m[1])||0)+1);
+ if(c)f.caps.set(c.trim(),(f.caps.get(c.trim())||0)+1);
+}
+const EVTR={'Tunnel Up':['Túnel conectado','g'],'Tunnel Down':['Túnel desconectado','r'],'User Disabled':['Desabilitado pelo usuário','a'],'User Enabled':['Habilitado pelo usuário','g'],'Enrolled':['Registrado (enroll)','g'],'Admin Disabled':['Desabilitado pelo admin','a'],'Admin Enabled':['Habilitado pelo admin','g'],'Uninstalled':['Desinstalado','r'],'Installed':['Instalado','b'],'Upgraded':['Atualizado','b']};
+const SVC={1:'Internet',2:'Private Access'};
+
+function parseLog(fi,text){
+ const F=S.files[fi];const lines=text.split(/\r?\n/);
+ for(const line of lines){
+  if(!line)continue;
+  let a=RA.exec(line),e=null;
+  if(a){const lv=normLvl(a[11]);if(!lv)continue;e={ms:ts(a.slice(1,8)),lvl:lv,proc:a[8],src:a[12],msg:a[13]}}
+  else if(line.charCodeAt(0)===91&&(a=RB.exec(line))){const lv=normLvl(a[9]);if(!lv)continue;e={ms:ts(a.slice(1,8)),lvl:lv,proc:'npa',src:a[10],msg:a[11]}}
+  else continue;
+  F.lines++;if(e.ms<F.min)F.min=e.ms;if(e.ms>F.max)F.max=e.ms;
+  if(e.ms<S.minT)S.minT=e.ms;if(e.ms>S.maxT)S.maxT=e.ms;
+  if(e.lvl==='error'||e.lvl==='critical')F.err++;else if(e.lvl==='warn')F.warn++;
+  S.entries.push([fi,e.ms,e.lvl,line]);
+  const m=e.msg;
+  // events
+  if(m.includes('starting ======')){const x=/=+ (\S+) ([\d.]+) starting/.exec(m);if(x){if(/stAgentSvc/i.test(x[1])){addEvent(e.ms,'Serviço iniciado','b','v'+x[2],F.base);S.facts.version=x[2]}}}
+  else if(m.includes('Service is stopping'))addEvent(e.ms,'Serviço parado','r','',F.base);
+  else if(m.includes('Caching client status, event:')){const x=/event: ([^,]+), actor: (\w+).*?service: (\d)/.exec(m);if(x){const t=EVTR[x[1]]||[x[1],'b'];addEvent(e.ms,t[0],t[1],(SVC[x[3]]||'Serviço '+x[3])+' · por '+(x[2]==='User'?'usuário':x[2]==='System'?'sistema':x[2]),F.base);S.state[x[3]]={ev:x[1],ms:e.ms}}}
+  else if(m.includes('Client location is')){const x=/Client location is (\S+)/.exec(m);if(x&&x[1]!=='N/A'&&x[1]!==S.lastLoc){S.lastLoc=x[1];addEvent(e.ms,'Local: '+x[1],'b','',F.base)}}
+  else if(m.includes('Log collection complete'))addEvent(e.ms,'Coleta de logs','b','',F.base);
+  else if(m.includes('NPA Tunnel Status:')){const x=/NPA Tunnel Status: (\w+)[^[]*\[(\w+)\]/.exec(m);if(x)S.facts.npaLast=x[2]}
+  if(!S.facts.tenantHost&&m.includes('goskope.com')){const x=/(?:addon|achecker|gateway|download|nsauth|aproxy)-([a-z0-9]+(?:\.(?:eu|de|au))?)\.goskope\.com/.exec(m);if(x)S.facts.tenantHost=x[1]}
+  if(m.includes('egress_ip')){const x=/egress_ip"?\s*[:=]\s*"?([\d.]+)/.exec(m);if(x)S.facts.egress=x[1]}
+  if(m.includes('fetched ordered POPs')){const x=/"name":"([^"]+)"/.exec(m);if(x)S.facts[/\[NPA\]/.test(m)?'popNpa':'popSwg']=x[1]}
+  if(m.includes('Primary tunnel dest IP')){const x=/dest IP: (\S+)/.exec(m);if(x)S.facts.gwIp=x[1]}
+  // rules
+  let matched=false;
+  for(const r of ANY){if(r.re.test(m)){hit(r,fi,e,line);matched=true;break}}
+  if(!matched&&(e.lvl==='error'||e.lvl==='critical'||e.lvl==='warn')){
+   for(const r of RULES){if(r.any)continue;if(r.re.test(m)){hit(r,fi,e,line);matched=true;break}}
+   if(!matched){const k=normMsg(e.src.replace(/:\d+.*$/,'')+' '+m);let u=S.unc.get(k);if(!u){u={k,lvl:e.lvl,count:0,files:new Set(),sample:line,first:e.ms,last:e.ms};S.unc.set(k,u)}u.count++;u.files.add(F.base);u.last=Math.max(u.last,e.ms);if(e.lvl!=='warn')u.lvl=e.lvl}
+  }
+ }
+}
+
+function parseInstall(t){
+ const v=/NSClient Version:\s*(\S+)/.exec(t);if(v)S.facts.installVer=v[1];
+ const o=/PRETTY_NAME:\s*"?([^"\n]+)/.exec(t);if(o)S.facts.osName=o[1];
+ const d=/^Time:\s*(.+)$/m.exec(t);if(d)S.facts.installTime=d[1].trim();
+ const miss=[...t.matchAll(/^(\S+) -+ \[not installed\]/gm)].map(x=>x[1]).filter(p=>!new RegExp('can replace '+p.replace(/[.+]/g,'\\$&')).test(t));
+ if(miss.length)S.extra.push({k:'deps',missing:miss,sev:'warn',cat:'Instalação',t:'Dependências ausentes na instalação',w:'O instalador listou pacotes não instalados sem substituto: '+miss.join(', ')+'.',a:'Instale os pacotes e reinicie o cliente.',count:miss.length});
+}
+function parseNetState(t,base){
+ const ifs=[...t.matchAll(/^\d+: ([^:@\s]+)(?:@\S+)?: <([^>]*)>/gm)].map(x=>({n:x[1],flags:x[2]}));
+ const nm={};let cur=null;for(const ln of t.split('\n')){let x=/^GENERAL\.DEVICE:\s+(\S+)/.exec(ln);if(x){cur=x[1];nm[cur]={dns:[]};continue}x=/^IP4\.DNS\[\d+\]:\s+(\S+)/.exec(ln);if(x&&cur)nm[cur].dns.push(x[1])}
+ const vpn=ifs.filter(i=>VPNIF.test(i.n));
+ if(vpn.length){
+  const dead=vpn.filter(i=>/NO-CARRIER/.test(i.flags));
+  const dns=[...new Set(dead.flatMap(i=>(nm[i.n]||{}).dns||[]))];
+  if(dead.length)S.extra.push({k:'orphan',ifs:dead.map(i=>i.n),sev:dns.length?'crit':'warn',cat:'Rede',t:`${dead.length} interface(s) de VPN de terceiros sem link (órfãs)`,w:`Interfaces ${dead.map(i=>i.n).slice(0,8).join(', ')}${dead.length>8?'…':''} estão sem portadora (NO-CARRIER) mas continuam configuradas`+(dns.length?`, com servidores DNS ${dns.join(', ')}. Esses DNS internos podem ser consultados primeiro e não responder fora da rede corporativa — causa comum dos timeouts e falhas de DNS do Netskope.`:'. Podem deixar rotas inconsistentes.'),a:'Desconecte/remova os perfis de VPN antigos (ex.: no FortiClient, desconectar e reiniciar o serviço; ou nmcli connection delete). Durante a migração, evite as duas VPNs ativas ao mesmo tempo.',count:dead.length,samples:dead.map(i=>base+': '+i.n+' <'+i.flags+'> DNS: '+(((nm[i.n]||{}).dns||[]).join(', ')||'—'))});
+ }
+ const ps=/\$ [^\n]*ps aux[^\n]*\n([\s\S]*?)(?=\n\$ |$)/.exec(t);if(ps)scanProcs(ps[1],base);
+ const def=nm&&Object.entries(nm).filter(([k,v])=>!VPNIF.test(k)&&v.dns.length).map(([k,v])=>k+': '+v.dns.join(', '));if(def.length)S.facts.dns=def.join(' · ');
+}
+function scanProcs(txt,base){
+ const lines=txt.split('\n').filter(l=>!/nsdiag|grep/.test(l));
+ for(const c of CONFLICT){const hits=lines.filter(l=>c.re.test(l));if(hits.length)S.extra.push({k:'conflict',sev:'warn',cat:'Conflito',t:`${c.n} em execução junto com o Netskope`,w:`Foram encontrados ${hits.length} processo(s) do ${c.n} rodando. Duas soluções de VPN/proxy ativas disputam rotas, DNS e regras de firewall e são causa frequente de quedas e timeouts.`,a:`Se a migração para o Netskope já foi concluída para este usuário, desinstale ou desative o ${c.n}. Caso precise coexistir, garanta que o ${c.n} não esteja conectado e que não force DNS/rotas.`,count:hits.length,samples:hits.slice(0,5).map(l=>base+': '+l.replace(/\s+/g,' ').slice(0,200))})}
+}
+
+function parseJson(base,txt){
+ let j;try{j=JSON.parse(txt)}catch(e){return}
+ S.json[base.toLowerCase()]=j;
+}
+function deriveFacts(){
+ const F=S.facts,J=S.json;
+ const c=J['nsconfig.json']||J['nsconfig.json.bak'];
+ if(c){const d=c.cache&&c.cache.device||{};F.host=F.host||d.hostname;F.os=F.os||((d.os||'')+' '+(d.os_version||'')).trim();F.version=F.version||d.ns_version;F.model=[d.make,d.model].filter(Boolean).join(' ');const cc=c.clientConfig||{};F.clientCfg=cc.configurationName;F.allowDisable=cc.allowClientDisabling}
+ const ev=J['eventcache.json'];
+ if(ev&&typeof ev==='object'){const arr=Object.values(ev).map(x=>x&&x.client_status).filter(Boolean).sort((a,b)=>(+a.timestamp)-(+b.timestamp));const l=arr[arr.length-1];if(l){F.tenant=l.tenant_id;F.svcStatus=l.status;F.npaStatus=l.npa_status;F.onprem=l.onprem_status&&(l.onprem_status.status+' ('+l.onprem_status.method+')');F.steering=l.host_info&&l.host_info.steeringConfig;F.host=F.host||(l.host_info&&l.host_info.hostname)}}
+ const u=J['nsuser.conf'];if(u&&u.userConfig)F.failClose=u.userConfig.failCloseStatus;
+ const st=J['nssteering.json'];if(st&&!F.tenantHost&&Array.isArray(st.domains)){for(const d of st.domains){const x=/^(?:achecker|aproxy|addon|saml)-([a-z0-9]+(?:\.(?:eu|de|au))?)\.goskope\.com$/.exec(d);if(x){F.tenantHost=x[1];break}}}
+ if(st){F.steering=F.steering||st.steering_config_name;F.trafficMode=st.traffic_mode}
+ if(F.installVer&&F.version&&F.installVer!==F.version)S.extra.push({k:'version',sev:'info',cat:'Instalação',t:'Versão em execução difere da última instalação registrada',w:`install.log registra a versão ${F.installVer} (${F.installTime||'data desconhecida'}), mas o serviço está rodando ${F.version}. Indica reinstalação, downgrade ou atualização automática (golden release).`,a:'Confirme se a versão atual é a esperada para o tenant.',count:1});
+ const s1=S.state[1];
+ if(s1&&s1.ev==='User Disabled'&&F.failClose==='true')S.extra.push({k:'failclose',sev:'warn',cat:'Túnel',t:'Cliente terminou desabilitado com fail-close ativo',w:'O último evento do serviço Internet foi “desabilitado pelo usuário” e o fail-close está ligado — o usuário pode ficar sem navegação.',a:'Peça ao usuário para reabilitar o cliente.',count:1});
+}
+
+/* ---------- pipeline ---------- */
+async function handle(list){
+ reset();const prog=$('#progress');const items=[];
+ try{
+  for(const f of list){const buf=new Uint8Array(await f.arrayBuffer());prog.textContent='Lendo '+f.name+'…';
+   if(/\.zip$/i.test(f.name)||(buf[0]===0x50&&buf[1]===0x4b&&buf[2]===3))await unzip(buf,'',items);else items.push({name:f.webkitRelativePath||f.name,data:buf})}
+  items.sort((a,b)=>b.data.length-a.data.length);
+  let i=0;
+  for(const it of items){
+   i++;const base=it.name.split('/').pop();
+   if(/\.(pcap|pcapng|etl|dmp|exe|dll|png|jpe?g|gz|7z|evtx|p12|enc|der|pem|key|cab|bin)$/i.test(base)){S.skipped.push(base);continue}
+   prog.textContent=`Analisando ${base} (${i}/${items.length})…`;await new Promise(r=>setTimeout(r,0));
+   const txt=decode(it.data,base);if(txt===null){S.skipped.push(base);continue}
+   const fi=S.files.push({name:it.name,base,size:it.data.length,lines:0,err:0,warn:0,min:Infinity,max:-Infinity})-1;
+   if(/\.(json|conf|bak)$/i.test(base))parseJson(base,txt);
+   if(/^install\.log$/i.test(base))parseInstall(txt);
+   if(/network-state|ipconfig|netstat/i.test(base))parseNetState(txt,base);
+   if(/process|tasklist|ps[-_]?aux/i.test(base))scanProcs(txt,base);
+   if(/^appinfo/i.test(base)){for(const c of CONFLICT)if(c.re.test(txt))S.facts.installedApps=(S.facts.installedApps?S.facts.installedApps+', ':'')+c.n}
+   parseLog(fi,txt);
+  }
+  deriveFacts();
+  if(!S.entries.length&&!S.extra.length){prog.textContent='Nenhum log do Netskope reconhecido nesses arquivos.';return}
+  prog.textContent='';render();
+ }catch(err){prog.textContent='Erro ao ler: '+err.message}
+}
+
+/* ---------- render ---------- */
+let FILTER='problems';
+function allFindings(){
+ const out=[];
+ const starts=S.events.filter(e=>e.label==='Serviço iniciado').map(e=>e.ms);const DOWN={crit:'warn',warn:'info',info:'info',noise:'noise'};
+ for(const f of S.find.values()){let sev=f.r.sevf?f.r.sevf(f.count):f.r.sev,w=f.r.w;
+  if(f.r.cat!=='Ruído'&&!f.r.any&&f.last-f.first<=180000&&starts.some(t=>f.first>=t&&f.first-t<=180000)){sev=DOWN[sev];w+=' Observação: todas as ocorrências ficaram concentradas nos primeiros minutos após o (re)início do serviço, então provavelmente é transitório.'}
+  out.push({sev,cat:f.r.cat,t:f.r.t,w,a:f.r.a,count:f.count,first:f.first,last:f.last,files:[...f.files].map(x=>x.split('/').pop()),samples:f.samples,caps:[...f.caps.entries()].sort((a,b)=>b[1]-a[1]),q:f.r.id,k:f.r.id})}
+ for(const x of S.extra)out.push(Object.assign({first:NaN,last:NaN,files:[],samples:[],caps:[]},x));
+ return out.sort((a,b)=>SEV[a.sev].o-SEV[b.sev].o||b.count-a.count);
+}
+const QHINT={timeout:'code 28',dns:'code 6,',conn:'code 7,',http:'HTTP response',cfgdl:'download config',restapi:'restapi Failed',bypasscat:'bypass',gslb:'GSLB',tundown:'Tunnel Down',userdis:'User Disabled',restart:'Service is stopping',npagw:'Connection to GW',route:'ipRoute',firefox:'firefox',ipc:'NSCOM2',ssl:'SSL',bwan:'bwan',decrypt:'decrypt',fips:'Fips',ipv6:'IPv6 next header',session:'session',perm:'err: 13',upn:'UPN',clientstatus:'client status',dem:'DEM'};
+
+function render(){
+ $('#hero').classList.add('hidden');$('#reset').classList.remove('hidden');$('#results').classList.remove('hidden');
+ const all=allFindings();const n={crit:0,warn:0,info:0,noise:0};all.forEach(f=>n[f.sev]++);
+ const v=$('#resumo');v.className='band verdict '+(n.crit?'crit':n.warn?'warn':'ok');
+ $('#vtitle').textContent=n.crit?`${n.crit} problema${n.crit>1?'s':''} crítico${n.crit>1?'s':''} encontrado${n.crit>1?'s':''}`:n.warn?`Sem falhas críticas, ${n.warn} ponto${n.warn>1?'s':''} de atenção`:'Nenhum problema relevante encontrado';
+ const span=isFinite(S.minT)?`de ${fmtT(S.minT)} a ${fmtT(S.maxT)}`:'';
+ $('#vsub').textContent=`${fmtN(S.entries.length)} linhas de log em ${S.files.filter(f=>f.lines).length} arquivos, ${span}. ${fmtN(S.files.reduce((a,f)=>a+f.err,0))} erros e ${fmtN(S.files.reduce((a,f)=>a+f.warn,0))} alertas brutos — a maior parte é ruído conhecido; abaixo estão os que importam.`;
+ $('#counts').innerHTML=[['c','crit'],['w','warn'],['i','info'],['n','noise']].map(([c,k])=>`<div class="count ${c}"><b>${n[k]}</b>${SEV[k].l}</div>`).join('');
+ const top=all.filter(f=>f.sev==='crit'||f.sev==='warn').slice(0,5);
+ $('#topissues').innerHTML=top.length?'<h3 style="margin-bottom:8px">Principais pontos</h3>'+top.map(f=>`<div style="display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)"><span class="pill p-${f.sev}">${SEV[f.sev].l}</span><span>${esc(f.t)}</span></div>`).join(''):'';
+ const F=S.facts,st=k=>{const s=S.state[k];if(!s)return null;const t=EVTR[s.ev]||[s.ev,'b'];return `<span class="pill p-${t[1]==='g'?'ok':t[1]==='r'?'crit':t[1]==='a'?'warn':'info'}">${esc(t[0])}</span> <span class="small mute">${fmtT(s.ms)}</span>`};
+ const rows=[['Dispositivo',F.host],['Sistema',F.osName||F.os],['Modelo',F.model],['Versão do cliente',F.version],['Tenant',F.tenantHost?F.tenantHost+'.goskope.com':null],['Tenant ID',F.tenant],['Steering',F.steering],['Perfil de configuração',F.clientCfg],['Localização',F.onprem],['IP de saída',F.egress],['POP NPA',F.popNpa],['Gateway SWG',F.gwIp],['DNS do sistema',F.dns],['Fail-close',F.failClose==='true'?'Ativo':F.failClose==='false'?'Inativo':null],['Usuário pode desabilitar',F.allowDisable==='true'?'Sim':F.allowDisable==='false'?'Não':null],['Outras VPNs instaladas',F.installedApps]];
+ $('#facts').innerHTML=`<dt>Internet (SWG)</dt><dd>${st(1)||'—'}</dd><dt>Private Access</dt><dd>${st(2)||esc(F.npaLast||'—')}</dd>`+rows.filter(r=>r[1]).map(r=>`<dt>${r[0]}</dt><dd>${esc(r[1])}</dd>`).join('');
+ drawMetro();drawChart();renderFilters(all,n);renderFindings(all);renderUnc();renderFiles();initExplorer();
+ window.__report=report(all,n);
+ location.hash='resumo';
+}
+
+function renderFilters(all,n){
+ const opts=[['problems','Problemas ('+(n.crit+n.warn)+')'],['crit','Crítico ('+n.crit+')'],['warn','Atenção ('+n.warn+')'],['info','Informativo ('+n.info+')'],['noise','Ruído conhecido ('+n.noise+')'],['all','Todos ('+all.length+')']];
+ $('#filters').innerHTML=opts.map(([k,l])=>`<button type="button" data-f="${k}" aria-pressed="${k===FILTER}">${l}</button>`).join('');
+}
+function renderFindings(all){
+ const list=all.filter(f=>FILTER==='all'||(FILTER==='problems'?(f.sev==='crit'||f.sev==='warn'):f.sev===FILTER));
+ if(!list.length){$('#findings').innerHTML='<div class="empty">Nada nesta categoria.</div>';return}
+ $('#findings').innerHTML=list.map((f,i)=>`<details class="finding ${f.sev}" ${i<2&&f.sev==='crit'?'open':''}>
+ <summary><div><span class="pill p-${f.sev}">${SEV[f.sev].l}</span> <span class="small mute">${esc(f.cat)}</span><h3 style="margin-top:4px">${esc(f.t)}</h3>
+ <div class="meta">${isFinite(f.first)?`<span>Primeira: ${fmtT(f.first)}</span><span>Última: ${fmtT(f.last)}</span>`:''}${f.files.length?`<span>${esc(f.files.join(', '))}</span>`:''}</div></div><div class="num">${fmtN(f.count)}<div class="small mute" style="font-weight:500">ocorrência${f.count>1?'s':''}</div></div></summary>
+ <div class="fbody"><div><h4>O que significa</h4><p>${esc(f.w)}</p></div>${fixHtml(f)}
+ ${f.caps.length?`<div><h4>Detalhe</h4><p>${f.caps.slice(0,8).map(([k,c])=>esc(k)+' <span class="mute">×'+c+'</span>').join(' · ')}</p></div>`:''}
+ ${f.samples.length?`<div><h4>Exemplos</h4><div class="samples">${f.samples.map(esc).join('\n')}</div></div>`:''}
+ ${f.q&&QHINT[f.q]?`<div><button type="button" class="linkbtn" data-q="${esc(QHINT[f.q])}">Ver todas as linhas no explorador</button></div>`:''}</div></details>`).join('');
+}
+function fixHtml(f){
+ const st=stepsFor(f.k,f),d=FIX[f.k];
+ if(f.sev==='noise'&&!st.length)return `<div><h4>Como resolver</h4><p>Nenhuma ação necessária. ${esc(f.a)}</p></div>`;
+ const steps=st.length?st:[[f.a,null]];
+ const os=detectOS();
+ return `<div class="fix"><h4>Como resolver${os?' <span class="pill p-ok">'+OSL[os]+'</span>':''}</h4><ol>${steps.map(s=>`<li><span>${esc(s[0])}</span>${s[1]?`<div class="cmd"><pre>${esc(s[1])}</pre><button type="button" class="cbtn" data-copy="${esc(s[1])}">Copiar</button></div>`:''}</li>`).join('')}</ol>
+ ${d&&d.refs?`<h4>Documentação oficial</h4><ul class="refs">${d.refs.map(r=>REF[r]).filter(Boolean).map(r=>`<li><a href="${esc(r[1])}" target="_blank" rel="noopener">${esc(r[0])}</a></li>`).join('')}</ul>`:''}
+ <h4>Pesquisar mais</h4><div class="srch">${searchLinks(d&&d.kq||f.t).map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])} ↗</a>`).join('')}</div></div>`;
+}
+function renderUnc(){
+ const u=[...S.unc.values()].sort((a,b)=>b.count-a.count).slice(0,40);
+ $('#unclass').innerHTML=u.length?`<thead><tr><th>Mensagem</th><th>Nível</th><th class="n">Qtde</th><th>Arquivos</th><th>Última</th><th>Pesquisar</th></tr></thead><tbody>`+u.map(x=>`<tr><td><code>${esc(x.k)}</code></td><td><span class="pill p-${x.lvl==='warn'?'warn':'crit'}">${x.lvl==='warn'?'alerta':'erro'}</span></td><td class="n">${fmtN(x.count)}</td><td>${esc([...x.files].join(', '))}</td><td class="n">${fmtT(x.last)}</td><td><div class="srch">${searchLinks(x.k.replace(/^\S+\.(cpp|h)\s+/,'').replace(/<ip>|<id>|#/g,' ').replace(/\s+/g,' ').trim().slice(0,90)).slice(0,2).map(l=>`<a href="${esc(l[1])}" target="_blank" rel="noopener">${esc(l[0])} ↗</a>`).join('')}</div></td></tr>`).join('')+'</tbody>':'<tbody><tr><td class="mute">Todos os erros e alertas foram classificados.</td></tr></tbody>';
+}
+function renderFiles(){
+ const fs=S.files.slice().sort((a,b)=>b.lines-a.lines);
+ $('#ftable').innerHTML=`<thead><tr><th>Arquivo</th><th class="n">Tamanho</th><th class="n">Linhas</th><th class="n">Erros</th><th class="n">Alertas</th><th>Período</th></tr></thead><tbody>`+fs.map(f=>`<tr><td>${esc(f.name)}</td><td class="n">${f.size>1048576?(f.size/1048576).toFixed(1)+' MB':Math.ceil(f.size/1024)+' KB'}</td><td class="n">${fmtN(f.lines)}</td><td class="n">${fmtN(f.err)}</td><td class="n">${fmtN(f.warn)}</td><td class="small">${f.lines?fmtT(f.min)+' → '+fmtT(f.max):'<span class="mute">configuração / texto</span>'}</td></tr>`).join('')+'</tbody>';
+ $('#skipped').textContent=S.skipped.length?'Não analisados (binários ou sensíveis): '+S.skipped.join(', '):'';
+}
+
+const COL={g:'var(--green)',r:'var(--red)',a:'var(--amber)',b:'var(--blue)'};
+function drawMetro(){
+ const ev=S.events.slice().sort((a,b)=>a.ms-b.ms);const box=$('#metro');
+ if(!ev.length){box.innerHTML='<p class="mute" style="padding:18px">Nenhum evento de estado encontrado nos logs.</p>';return}
+ const gap=150,W=Math.max(box.clientWidth||700,180+(ev.length-1)*gap),H=210,y=105;
+ const x=i=>90+i*gap;let s=`<svg width="${W}" height="${H}" role="img" aria-label="Linha do tempo de eventos">`;
+ s+=`<path d="M20 ${y} H${x(ev.length-1)+40}" stroke="var(--ink)" stroke-width="10" stroke-linecap="round"/>`;
+ for(let i=1;i<ev.length;i++){const d=new Date(ev[i].ms).getUTCDate()!==new Date(ev[i-1].ms).getUTCDate();if(d)s+=`<line x1="${x(i)-gap/2}" x2="${x(i)-gap/2}" y1="${y-26}" y2="${y+26}" stroke="var(--mute)" stroke-dasharray="3 3"/>`}
+ ev.forEach((e,i)=>{const up=i%2===0,ty=up?y-52:y+46;const lab=e.label.length>21?e.label.slice(0,20)+'…':e.label;const det=e.detail.replace(/ · por .*/,'');
+  s+=`<g><title>${esc(e.label+(e.detail?' — '+e.detail:'')+' · '+fmtT(e.ms)+' · '+e.file)}</title><circle cx="${x(i)}" cy="${y}" r="13" fill="var(--bg)" stroke="var(--ink)" stroke-width="5"/><circle cx="${x(i)}" cy="${y}" r="6" fill="${COL[e.color]}"/>
+  <text x="${x(i)}" y="${ty}" text-anchor="middle" font-size="13.5" font-weight="700" fill="var(--ink)">${esc(lab)}</text>
+  <text x="${x(i)}" y="${ty+17}" text-anchor="middle" font-size="12" fill="var(--mute)">${esc(fmtT(e.ms).slice(6))}${det?' · '+esc(det.length>16?det.slice(0,15)+'…':det):''}</text></g>`});
+ box.innerHTML=s+'</svg>';
+}
+function drawChart(){
+ const svg=$('#chartsvg');const W=svg.clientWidth,H=svg.clientHeight;if(!W||!isFinite(S.minT))return;
+ const span=Math.max(S.maxT-S.minT,60000);const steps=[60e3,300e3,900e3,3600e3,21600e3,86400e3];const step=steps.find(s=>span/s<=Math.max(20,W/9))||86400e3;
+ const t0=Math.floor(S.minT/step)*step,nb=Math.floor((S.maxT-t0)/step)+1;const E=new Array(nb).fill(0),Wn=new Array(nb).fill(0);
+ for(const e of S.entries){const b=Math.floor((e[1]-t0)/step);if(e[2]==='warn')Wn[b]++;else if(e[2]==='error'||e[2]==='critical')E[b]++}
+ const mx=Math.max(1,...E.map((v,i)=>v+Wn[i]));const pl=W<520?8:44,pb=26,pt=10,cw=(W-pl-8)/nb,ch=H-pb-pt;
+ let s='';const ticks=W<520?[]:[0,.5,1];
+ for(const t of ticks){const yy=pt+ch*(1-t);s+=`<line x1="${pl}" x2="${W-8}" y1="${yy}" y2="${yy}" stroke="var(--line)"/><text x="${pl-6}" y="${yy+4}" text-anchor="end" font-size="12" fill="var(--mute)">${Math.round(mx*t)}</text>`}
+ for(let i=0;i<nb;i++){const he=E[i]/mx*ch,hw=Wn[i]/mx*ch,xx=pl+i*cw+cw*.12,bw=Math.max(1,cw*.76);
+  if(hw)s+=`<rect x="${xx}" y="${pt+ch-he-hw}" width="${bw}" height="${hw}" fill="var(--amber)"><title>${fmtT(t0+i*step)}: ${Wn[i]} alertas</title></rect>`;
+  if(he)s+=`<rect x="${xx}" y="${pt+ch-he}" width="${bw}" height="${he}" fill="var(--red)"><title>${fmtT(t0+i*step)}: ${E[i]} erros</title></rect>`}
+ const lab=Math.max(1,Math.ceil(nb/(W/90)));for(let i=0;i<nb;i+=lab){const t=fmtT(t0+i*step);s+=`<text x="${pl+i*cw+cw/2}" y="${H-6}" text-anchor="middle" font-size="12" fill="var(--mute)">${step>=86400e3?t.slice(0,5):t.slice(6,11)}</text>`}
+ svg.innerHTML=s;
+}
+
+/* explorer */
+let xTimer;
+function initExplorer(){
+ const sel=$('#xfile');sel.innerHTML='<option value="">Todos os arquivos</option>'+S.files.map((f,i)=>f.lines?`<option value="${i}">${esc(f.base)}</option>`:'').join('');
+ $('#xq').value='';runX();
+}
+function runX(){
+ const q=$('#xq').value.trim().toLowerCase(),lv=$('#xlvl').value,fv=$('#xfile').value;const out=[];let total=0;
+ const ent=S.entries.slice().sort((a,b)=>a[1]-b[1]);
+ for(const e of ent){
+  if(fv!==''&&e[0]!=+fv)continue;
+  if(lv==='e'&&!(e[2]==='error'||e[2]==='critical'))continue;
+  if(lv==='ew'&&!(e[2]==='error'||e[2]==='critical'||e[2]==='warn'))continue;
+  if(q&&!e[3].toLowerCase().includes(q))continue;
+  total++;if(out.length<800)out.push(e);
+ }
+ $('#xinfo').textContent=`${fmtN(total)} linha(s) encontradas`+(total>800?' — mostrando as primeiras 800; refine a busca.':'');
+ const hl=s=>{let h=esc(s);if(q){const re=new RegExp(esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi');h=h.replace(re,m=>'<mark>'+m+'</mark>')}return h};
+ $('#xout').innerHTML=out.map(e=>`<div class="${e[2]}"><span class="mute">${esc(S.files[e[0]].base)} │ </span>${hl(e[3].slice(0,600))}</div>`).join('')||'<div class="mute">Nenhuma linha.</div>';
+}
+
+function report(all,n){
+ const F=S.facts,L=[];
+ L.push('# Análise de logs Netskope'+(F.host?' — '+F.host:''));
+ L.push(`Período: ${fmtT(S.minT)} → ${fmtT(S.maxT)} | Versão: ${F.version||'—'} | SO: ${F.osName||F.os||'—'} | Tenant: ${F.tenant||'—'}`);
+ L.push(`Resultado: ${n.crit} crítico(s), ${n.warn} de atenção, ${n.info} informativo(s), ${n.noise} ruído(s) conhecido(s).`,'');
+ for(const f of all.filter(f=>f.sev!=='noise')){L.push(`## [${SEV[f.sev].l}] ${f.t} (${f.count}x)`);if(isFinite(f.first))L.push(`Período: ${fmtT(f.first)} → ${fmtT(f.last)}`);L.push('O que significa: '+f.w,'Como resolver:');const st=stepsFor(f.k,f);(st.length?st:[[f.a,null]]).forEach((s,i)=>{L.push(`${i+1}. ${s[0]}`);if(s[1])L.push('```',s[1],'```')});const d=FIX[f.k];if(d&&d.refs)L.push('Referências: '+d.refs.map(r=>REF[r]&&REF[r][1]).filter(Boolean).join(' , '));L.push('')}
+ const ev=S.events.slice().sort((a,b)=>a.ms-b.ms);if(ev.length){L.push('## Linha do tempo');ev.forEach(e=>L.push(`- ${fmtT(e.ms)} ${e.label}${e.detail?' ('+e.detail+')':''}`))}
+ return L.join('\n');
+}
+function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1800)}
+
+/* events */
+const drop=$('#drop'),inp=$('#file');
+drop.addEventListener('click',()=>inp.click());
+drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();inp.click()}});
+inp.addEventListener('change',()=>{if(inp.files.length)handle([...inp.files]);inp.value=''});
+['dragenter','dragover'].forEach(t=>document.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(t=>document.addEventListener(t,e=>{e.preventDefault();if(t==='drop'||e.target===drop)drop.classList.remove('over')}));
+document.addEventListener('drop',e=>{drop.classList.remove('over');const fs=[...(e.dataTransfer?.files||[])];if(fs.length){if(!$('#results').classList.contains('hidden'))resetUI();handle(fs)}});
+function resetUI(){$('#results').classList.add('hidden');$('#hero').classList.remove('hidden');$('#reset').classList.add('hidden');$('#repbox').classList.add('hidden');FILTER='problems'}
+$('#reset').addEventListener('click',()=>{resetUI();scrollTo(0,0)});
+$('#filters').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;FILTER=b.dataset.f;const all=allFindings();const n={crit:0,warn:0,info:0,noise:0};all.forEach(f=>n[f.sev]++);renderFilters(all,n);renderFindings(all)});
+$('#findings').addEventListener('click',async e=>{const c=e.target.closest('[data-copy]');if(c){try{await navigator.clipboard.writeText(c.dataset.copy);c.textContent='Copiado';setTimeout(()=>c.textContent='Copiar',1500)}catch(err){const pre=c.previousElementSibling;const r=document.createRange();r.selectNodeContents(pre);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);toast('Selecionado — use Ctrl+C')}return}const b=e.target.closest('[data-q]');if(!b)return;$('#xq').value=b.dataset.q;$('#xlvl').value='all';$('#xfile').value='';runX();$('#explorador').scrollIntoView({behavior:'smooth'})});
+$('#xq').addEventListener('input',()=>{clearTimeout(xTimer);xTimer=setTimeout(runX,250)});
+$('#xlvl').addEventListener('change',runX);$('#xfile').addEventListener('change',runX);
+$('#copyrep').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(window.__report);toast('Relatório copiado')}catch(err){$('#reptxt').value=window.__report;$('#repbox').classList.remove('hidden')}});
+const chartRO=new ResizeObserver(()=>{if(S&&S.entries.length)drawChart()});chartRO.observe($('#chart'));
+/* PWA: instalar como app do Windows pelo Edge/Chrome + funcionar offline */
+let deferredInstall=null;
+if(location.protocol.startsWith('http')&&'serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('#install').classList.remove('hidden')});
+window.addEventListener('appinstalled',()=>{$('#install').classList.add('hidden');toast('App instalado — procure “Netskope Log Analyzer” no Menu Iniciar')});
+$('#install').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice.catch(()=>{});deferredInstall=null;$('#install').classList.add('hidden')});
+/* abrir .zip/.log pelo Windows ("Abrir com" no app instalado) */
+if('launchQueue' in window){window.launchQueue.setConsumer(async p=>{if(!p.files||!p.files.length)return;const fs=[];for(const h of p.files)fs.push(await h.getFile());handle(fs)})}
+if(typeof DecompressionStream==='undefined')$('#progress').textContent='Seu navegador não descompacta .zip; extraia e solte os arquivos .log.';
+reset();
+}
+</script>
+</body>
+</html>
