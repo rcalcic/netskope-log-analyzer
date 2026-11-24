@@ -1,0 +1,69 @@
+name: Teste de fumaça da interface (Windows)
+
+# Abre o app com um pacote de logs sintético e tira screenshots de cada aba.
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publicar o app
+        shell: pwsh
+        run: dotnet publish src/NetskopeLogAnalyzer/NetskopeLogAnalyzer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+
+      - name: Abrir o app e capturar as abas
+        shell: pwsh
+        run: |
+          $d = New-Item -ItemType Directory -Force smoke
+          $pkg = New-Item -ItemType Directory -Force smoke/pkg
+          $lines = @('2026/11/23 10:00:00.100000 stAgentSvc p1 t1 info main.cpp:145 main ======= stAgentSvc 141.1.14.2843 starting ======',
+                     '2026/11/23 10:00:05.100000 stAgentSvc p1 t1 info tunnel.cpp:1 nsTunnel flow to host: achecker-acme.goskope.com',
+                     '2026/11/23 10:00:06.100000 stAgentSvc p1 t1 info c.cpp:825 clientStatusHandler [sessId 1] Caching client status, event: Tunnel Up, actor: System, time: 1, service: 1',
+                     '2026/11/23 10:20:00.100000 stAgentSvc p1 t1 info c.cpp:825 clientStatusHandler [sessId 1] Caching client status, event: Tunnel Down, actor: System, time: 2, service: 1',
+                     '2026/11/23 10:30:00.100000 stAgentSvc p1 t1 error x.cpp:1 Something new 1')
+          foreach ($i in 0..11) { $lines += ('2026/11/23 10:{0:00}:00.100000 stAgentSvc p1 t1 warn nsHTTPClient.cpp:537 downloader curl_easy_perform failed, code 28, error Timeout was reached' -f (5 + $i)) }
+          Set-Content smoke/pkg/nsdebuglog.log $lines
+          Set-Content smoke/pkg/install.log "NSClient Version: 141.1.14.2843`n  PRETTY_NAME: `"Ubuntu 24.04.4 LTS`""
+          Compress-Archive smoke/pkg/* smoke/NetskopeLogs-sintetico.zip
+
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing, UIAutomationClient, UIAutomationTypes
+          function Shot($name) {
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("smoke/$name.png"); $g.Dispose(); $bmp.Dispose()
+          }
+          $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList (Resolve-Path smoke/NetskopeLogs-sintetico.zip).Path -PassThru
+          Start-Sleep 15
+          if ($p.HasExited) { throw "O app fechou sozinho (código $($p.ExitCode))" }
+          Shot '1-resumo'
+          $root = [System.Windows.Automation.AutomationElement]::RootElement
+          $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
+          $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
+          if (-not $win) { throw 'Janela do app não encontrada' }
+          $tabCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
+          $tabs = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants, $tabCond)
+          Write-Host "Abas encontradas: $($tabs.Count)"
+          $n = 2
+          foreach ($t in $tabs) {
+            if ($t.Current.Name -like 'Resumo*') { continue }
+            $t.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+            Start-Sleep 2
+            $safe = ($t.Current.Name -replace '[^\w]+', '-').Trim('-').ToLower()
+            Shot ("{0}-{1}" -f $n, $safe); $n++
+          }
+          if ($p.HasExited) { throw 'O app fechou durante a navegação' }
+          Stop-Process -Id $p.Id
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: smoke/*.png
