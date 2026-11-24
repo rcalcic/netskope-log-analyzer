@@ -5,3 +5,4 @@ NetskopeLogs*.zip
 *.log
 *.pcap
 authtoken.pem
+site/

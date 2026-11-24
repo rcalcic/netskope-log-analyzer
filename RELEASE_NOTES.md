@@ -1,9 +1,7 @@
-Primeira versão do **Netskope Log Analyzer**.
+**Netskope Log Analyzer 1.0.1**
 
-- Importa o pacote de logs do Netskope Client (`Save logs` / `nsdiag -o`) e analisa tudo localmente.
-- Diagnóstico com cerca de 40 padrões conhecidos, separando problemas reais de ruído.
-- "Como resolver" passo a passo, com comandos para o sistema do log e links da documentação oficial da Netskope.
-- Detecta VPNs de terceiros em execução e interfaces de VPN órfãs com DNS internos.
-- Linha do tempo de eventos, gráfico de erros, explorador de logs e relatório copiável.
+- **Novo jeito de instalar, sem executável:** abra https://rcalcic.github.io/netskope-log-analyzer/ no Microsoft Edge e clique em **Instalar app**. Resolve o bloqueio do Windows (SmartScreen / Controle Inteligente de Aplicativos) ao `Setup.exe`, que não tem assinatura digital.
+- O app instalado funciona offline e aceita abrir `.zip` de logs pelo *Abrir com* do Windows.
+- A análise continua 100% local: nenhum log sai do computador.
 
-**Instalação:** baixe `NetskopeLogAnalyzer-1.0.0-Setup.exe` e execute (não precisa de administrador). Se o SmartScreen avisar, clique em *Mais informações* > *Executar assim mesmo*.
+Os pacotes abaixo continuam disponíveis como alternativa. O `Setup.exe` não é assinado; se o Windows bloquear sem opção de *Executar assim mesmo*, use o método pelo Edge.

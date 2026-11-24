@@ -22,18 +22,21 @@ Formatos lidos: `nsdebuglog.log`, `npadebuglog.log`, `nsApp.log`, `nsAppUI.log`,
 
 ## Instalação (Windows 10/11)
 
-Baixe o instalador na página de [Releases](../../releases).
+### Recomendado: instalar pelo Microsoft Edge (sem executável)
+1. Abra **https://rcalcic.github.io/netskope-log-analyzer/** no Microsoft Edge (ou Chrome).
+2. Clique no botão **Instalar app** no topo da página, ou no ícone *Aplicativo disponível* na barra de endereços, e confirme.
+3. Pronto: o **Netskope Log Analyzer** aparece no Menu Iniciar, abre em janela própria, funciona offline e pode ser fixado na barra de tarefas.
 
-**Recomendado: `NetskopeLogAnalyzer-<versão>-Setup.exe`**
-1. Execute o Setup. Não precisa de administrador: a instalação é por usuário, em `%LOCALAPPDATA%\Programs\NetskopeLogAnalyzer`.
-2. Se o SmartScreen avisar (o instalador não é assinado digitalmente), clique em *Mais informações* > *Executar assim mesmo*.
-3. O app ganha atalho no Menu Iniciar (e, se quiser, na Área de Trabalho) e abre em janela própria, usando o Microsoft Edge em modo aplicativo.
+Esse método não executa nenhum `.exe`, por isso o SmartScreen, o Controle Inteligente de Aplicativos e políticas que bloqueiam executáveis sem assinatura não interferem. Os logs continuam sendo analisados só no computador: o site é apenas o código do app e nada é enviado.
 
-Para desinstalar: *Configurações > Aplicativos > Aplicativos instalados > Netskope Log Analyzer*.
+Para desinstalar: abra o app, clique em *…* no canto da janela > *Desinstalar*, ou use *Configurações > Aplicativos > Aplicativos instalados*.
 
-**Alternativas**
-- `NetskopeLogAnalyzer-<versão>-Windows.zip`: extraia e execute `Instalar.cmd` (instalador por PowerShell, para ambientes que bloqueiam `.exe`).
-- `NetskopeLogAnalyzer-<versão>-portatil.html`: abre direto no Edge ou Chrome, sem instalar.
+Depois de instalado, dá para abrir um `.zip` de logs direto pelo Explorador de Arquivos com *Abrir com > Netskope Log Analyzer*.
+
+### Alternativas (baixe na página de [Releases](../../releases))
+- `NetskopeLogAnalyzer-<versão>-Setup.exe`: instalador clássico. Como **não tem assinatura digital**, o Windows pode bloquear; se aparecer “O Windows protegeu o computador”, clique em *Mais informações* > *Executar assim mesmo*. Se não houver essa opção (Controle Inteligente de Aplicativos ativo ou política corporativa), use o método pelo Edge.
+- `NetskopeLogAnalyzer-<versão>-Windows.zip`: instalador por PowerShell (`Instalar.cmd`).
+- `NetskopeLogAnalyzer-<versão>-portatil.html`: abre direto no navegador, sem instalar.
 
 O app roda no Windows, mas analisa pacotes de logs do Netskope Client vindos de Windows, macOS e Linux.
 
@@ -44,8 +47,11 @@ src/index.html                  aplicativo (HTML/CSS/JS em um único arquivo, se
 assets/                         ícones (SVG, PNG, ICO)
 installer/NetskopeLogAnalyzer.iss  script do instalador (Inno Setup 6)
 packaging/windows/              instalador alternativo por PowerShell e LEIA-ME
-build.ps1                       gera os pacotes em dist\
+web/                            manifesto e service worker do app instalável (PWA)
+tools/build_site.py             gera o site do GitHub Pages em site/
+build.ps1                       gera Setup.exe, zip e versão portátil em dist\
 .github/workflows/release.yml   compila e publica a release quando VERSION muda na main
+.github/workflows/pages.yml     publica o app no GitHub Pages a cada mudança na main
 VERSION                         versão atual
 ```
 

@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Netskope Log Analyzer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1116">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;800&display=swap" rel="stylesheet">
 <style>
@@ -117,7 +120,7 @@ textarea{width:100%;min-height:200px;font:13px ui-monospace,monospace;border-rad
  <div class="wrap">
   <div class="top">
    <div class="brand"><span class="dot"></span>Netskope Log Analyzer <span class="small mute" style="font-weight:500">v__VERSION__</span></div>
-   <button id="reset" class="hidden" type="button">Analisar outro pacote</button>
+   <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="install" class="primary hidden" type="button">Instalar app</button><button id="reset" class="hidden" type="button">Analisar outro pacote</button></div>
   </div>
   <div class="hero" id="hero">
    <div>
@@ -683,6 +686,14 @@ $('#xq').addEventListener('input',()=>{clearTimeout(xTimer);xTimer=setTimeout(ru
 $('#xlvl').addEventListener('change',runX);$('#xfile').addEventListener('change',runX);
 $('#copyrep').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(window.__report);toast('Relatório copiado')}catch(err){$('#reptxt').value=window.__report;$('#repbox').classList.remove('hidden')}});
 const chartRO=new ResizeObserver(()=>{if(S&&S.entries.length)drawChart()});chartRO.observe($('#chart'));
+/* PWA: instalar como app do Windows pelo Edge/Chrome + funcionar offline */
+let deferredInstall=null;
+if(location.protocol.startsWith('http')&&'serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredInstall=e;$('#install').classList.remove('hidden')});
+window.addEventListener('appinstalled',()=>{$('#install').classList.add('hidden');toast('App instalado — procure “Netskope Log Analyzer” no Menu Iniciar')});
+$('#install').addEventListener('click',async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice.catch(()=>{});deferredInstall=null;$('#install').classList.add('hidden')});
+/* abrir .zip/.log pelo Windows ("Abrir com" no app instalado) */
+if('launchQueue' in window){window.launchQueue.setConsumer(async p=>{if(!p.files||!p.files.length)return;const fs=[];for(const h of p.files)fs.push(await h.getFile());handle(fs)})}
 if(typeof DecompressionStream==='undefined')$('#progress').textContent='Seu navegador não descompacta .zip; extraia e solte os arquivos .log.';
 reset();
 }
