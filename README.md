@@ -45,7 +45,7 @@ assets/                         ícones (SVG, PNG, ICO)
 installer/NetskopeLogAnalyzer.iss  script do instalador (Inno Setup 6)
 packaging/windows/              instalador alternativo por PowerShell e LEIA-ME
 build.ps1                       gera os pacotes em dist\
-.github/workflows/release.yml   compila e publica a release ao criar uma tag v*
+.github/workflows/release.yml   compila e publica a release quando VERSION muda na main
 VERSION                         versão atual
 ```
 
@@ -54,12 +54,7 @@ Gerar os pacotes localmente (o Setup.exe requer o [Inno Setup 6](https://jrsoftw
 powershell -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
-Publicar uma nova versão: atualize `VERSION` e `RELEASE_NOTES.md`, faça commit e crie a tag:
-```powershell
-git tag v1.0.1
-git push origin v1.0.1
-```
-O GitHub Actions compila o instalador num runner Windows e cria a release com os pacotes anexados.
+Publicar uma nova versão: atualize `VERSION` (ex.: `1.0.1`) e `RELEASE_NOTES.md`, faça commit e push na `main`. O GitHub Actions compila o instalador num runner Windows e cria a release `v1.0.1` com os pacotes anexados. Também dá para disparar manualmente em *Actions > Build e Release (Windows) > Run workflow*, ou criando uma tag `v*`.
 
 ### Adicionar um novo padrão de erro
 Em `src/index.html`:
