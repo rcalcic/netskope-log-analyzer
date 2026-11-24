@@ -166,9 +166,11 @@ public sealed class TacInsights
             prev = e.Time;
         }
         // ilhas curtas de atividade (alguns logs periódicos) entre dois períodos inativos não contam como máquina ativa
+        var times = _r.Entries.Select(e => e.Time).ToList();
         for (var i = _gaps.Count - 2; i >= 0; i--)
         {
-            if ((_gaps[i + 1].Start - _gaps[i].End).TotalMinutes <= 3)
+            var island = LowerBound(times, _gaps[i + 1].Start.AddTicks(1)) - LowerBound(times, _gaps[i].End);
+            if ((_gaps[i + 1].Start - _gaps[i].End).TotalMinutes <= 3 && island < 5)
             {
                 _gaps[i] = (_gaps[i].Start, _gaps[i + 1].End);
                 _gaps.RemoveAt(i + 1);

@@ -81,7 +81,7 @@ public static class RootCause
             if (host is null) { merged.Add(inc); continue; }
             if (Priority(inc) < Priority(host))
             {
-                var promoted = new Incident { Title = inc.Title, Start = Min(inc.Start, host.Start), End = Max(inc.End, host.End), Kind = inc.Kind, Severity = (Severity)Math.Min((int)inc.Severity, (int)host.Severity), Impact = inc.Impact + " " + host.Impact, FindingKey = inc.FindingKey ?? host.FindingKey };
+                var promoted = new Incident { Title = inc.Title, Start = Priority(inc) <= 1 ? inc.Start : Min(inc.Start, host.Start), End = Max(inc.End, host.End), Kind = inc.Kind, Severity = (Severity)Math.Min((int)inc.Severity, (int)host.Severity), Impact = inc.Impact + " " + host.Impact, FindingKey = inc.FindingKey ?? host.FindingKey };
                 merged[merged.IndexOf(host)] = promoted;
             }
             else

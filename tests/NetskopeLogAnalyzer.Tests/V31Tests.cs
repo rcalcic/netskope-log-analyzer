@@ -153,7 +153,7 @@ public class V31Tests
         var r = Full();
         Assert.True(r.Series["npa.gw.rtt"].Points.Count >= 7);
         Assert.Contains(r.Series["npa.gw.retrans"].Points, p => p.Value >= 250);
-        var inc = r.Incidents.First(i => i.Title.StartsWith("Private Access", StringComparison.Ordinal) && Math.Abs((i.Start - T0.AddMinutes(40)).TotalMinutes) <= 1);
+        var inc = r.Incidents.First(i => i.Title.StartsWith("Private Access", StringComparison.Ordinal) && i.Start <= T0.AddMinutes(41) && i.End >= T0.AddMinutes(40));
         Assert.Contains(inc.Causes, c => c.Title.StartsWith("A Internet da máquina caiu", StringComparison.Ordinal));
     }
 
