@@ -46,7 +46,15 @@ public static class MetricCatalog
         ["flows.tunnel"] = new("Fluxos tunelados (por minuto)", "fluxos", Netskope, null, null),
         ["flows.bypass"] = new("Fluxos em bypass (por minuto)", "fluxos", Netskope, null, null),
         ["flows.udpblock"] = new("UDP/QUIC bloqueado (por minuto)", "conexões", Netskope, null, null),
-        ["log.errors"] = new("Erros no log (por minuto)", "erros", Netskope, 20, 60),
+        ["log.errors"] = new("Eventos relevantes no log (por minuto)", "eventos", Netskope, 5, 20),
+        // v3.1 — métricas derivadas dos logs (sem coletor)
+        ["npa.gw.rtt"] = new("Private Access: RTT até o gateway", "ms", Netskope, 80, 250),
+        ["npa.gw.retrans"] = new("Private Access: retransmissões TCP (por 5 min)", "segmentos", Netskope, 50, 200),
+        ["npa.dns.nxdomain"] = new("DNS via Private Access: respostas NXDOMAIN", "%", Network, 50, 80),
+        ["net.changes"] = new("Mudanças de rede detectadas pelo cliente (por 10 min)", "eventos", Network, 3, 10),
+        ["perf.sched"] = new("Atraso das tarefas periódicas do cliente", "s", Device, 20, 120),
+        ["perf.stall"] = new("Operações internas do cliente que estouraram o tempo (por 10 min)", "ocorrências", Device, 2, 10),
+        ["perf.lograte"] = new("Atividade de log do cliente (linhas por minuto)", "linhas", Device, null, null),
     };
 
     public static MetricSeries Create(string key, string source)

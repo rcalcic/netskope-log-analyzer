@@ -23,7 +23,7 @@ public static class Report
         return "Nenhum problema relevante encontrado";
     }
 
-    /// <summary>Relatório em Markdown, pronto para colar num chamado.</summary>
+    /// <summary>Relatório em Markdown para documentar o caso.</summary>
     public static string ToMarkdown(AnalysisResult r)
     {
         var F = r.Facts;
@@ -34,7 +34,46 @@ public static class Report
         if (r.Score is double sc) sb.AppendLine($"Experience Score: {sc:0}/100 ({ExperienceScore.Band(sc)}) em {r.Scores.Count} janelas de 5 min.");
         foreach (var (svc, av) in r.Availability) sb.AppendLine($"Disponibilidade {svc}: {av:0.#}% do tempo conectado.");
         if (!r.HasTelemetry) sb.AppendLine("Observação: sem telemetria do coletor (CPU, memória, disco e Wi-Fi contínuos não disponíveis).");
+        if (r.ScoreMissing != null) sb.AppendLine($"Score parcial: sem dados de {r.ScoreMissing}.");
         sb.AppendLine();
+
+        if (r.CaseSummary.Count > 0)
+        {
+            sb.AppendLine("## Resumo do caso");
+            foreach (var (q, a) in r.CaseSummary) sb.AppendLine($"- **{q}** {a}");
+            sb.AppendLine();
+        }
+        if (r.Performance.Count > 0)
+        {
+            sb.AppendLine("## Desempenho (derivado dos logs)");
+            sb.AppendLine("| Grupo | Métrica | Valor | Referência | Situação |");
+            sb.AppendLine("|---|---|---|---|---|");
+            foreach (var m in r.Performance) sb.AppendLine($"| {m.Group} | {m.Name} | {m.Value} | {m.Reference} | {m.Status} |");
+            sb.AppendLine();
+        }
+        var drops = r.NpaSessions.Where(x => x.End != null).ToList();
+        if (drops.Count > 0)
+        {
+            sb.AppendLine("## Quedas do Private Access");
+            sb.AppendLine("| Queda | Motivo | POP | Voltou em |");
+            sb.AppendLine("|---|---|---|---|");
+            foreach (var d in drops.TakeLast(60)) sb.AppendLine($"| {Time(d.End)} | {d.EndReason} | {d.Pop ?? d.GatewayIp ?? "—"} | {(d.Downtime is TimeSpan dt ? TelemetryParser.Fmt(dt) : "—")} |");
+            sb.AppendLine();
+        }
+        var cfg = r.Config.Where(c => c.Attention || c.Section is "Detecção on-prem" or "Steering").ToList();
+        if (cfg.Count > 0)
+        {
+            sb.AppendLine("## Configuração relevante");
+            foreach (var c in cfg) sb.AppendLine($"- {c.Section} › {c.Item}: **{c.Value}** — {c.Meaning}");
+            sb.AppendLine();
+        }
+        if (r.Coverage.Count > 0)
+        {
+            sb.AppendLine("## Cobertura dos logs");
+            foreach (var c in r.Coverage) sb.AppendLine($"- {c.Source}: {Time(c.First)} → {Time(c.Last)} ({TelemetryParser.Fmt(c.Span)}, {c.Lines:N0} linhas)");
+            foreach (var g in r.DataGaps) sb.AppendLine("- " + g);
+            sb.AppendLine();
+        }
 
         if (r.Incidents.Count > 0)
         {

@@ -21,13 +21,13 @@ public static class RootCause
         // 1) quedas de túnel (por serviço), até a próxima reconexão
         foreach (var s in r.States.Where(x => x.State != "Conectado" && x.State != "Habilitado" && x.Service is "Internet" or "Private Access"))
         {
-            if (s.State == "Serviço parado") continue;
+            if (s.State is "Serviço parado" or "Reautenticando" || s.State.StartsWith("Sem atividade", StringComparison.Ordinal)) continue;
             var sev = s.Duration.TotalMinutes >= 5 ? Severity.Critical : Severity.Warning;
             incidents.Add(new Incident
             {
                 Title = $"{s.Service}: {s.State.ToLowerInvariant()}", Start = s.Start, End = s.End, Severity = sev, Kind = "túnel",
                 Impact = $"Serviço {s.Service} indisponível por {TelemetryParser.Fmt(s.Duration)}" + (s.Service == "Internet" ? " (sem inspeção ou sem navegação, conforme o fail-close)." : " (aplicações privadas inacessíveis)."),
-                FindingKey = s.State.Contains("usuário") ? "userdis" : "tundown",
+                FindingKey = s.State.Contains("usuário") ? "userdis" : s.Service == "Private Access" && r.Findings.Any(f => f.Key == "npadrops") ? "npadrops" : "tundown",
             });
         }
 
@@ -178,6 +178,31 @@ public static class RootCause
                 $"{(loss > 0 ? $"perda máx. {loss:0}%" : "")}{(loss > 0 && rttW > 0 ? ", " : "")}{(rttW > 0 ? $"latência máx. {rttW:0} ms" : "")} na janela" + (symptom ? " (provável consequência do Wi-Fi/suspensão)." : "."),
                 "Compare o traceroute (aba Rede) para ver em qual trecho a latência aparece: rede local, provedor ou Netskope.");
         }
+
+        // Private Access: gateway sem resposta / encerrado
+        var npaDrop = inWin.LastOrDefault(e => e.Label == "Private Access desconectado");
+        if (npaDrop != null)
+        {
+            var tenantNear = r.Findings.Where(f => TenantFailKeys.Contains(f.Key)).SelectMany(f => f.Times).Count(t => t >= from && t <= inc.End.AddMinutes(2));
+            var retrans = Baseline.Worst(S("npa.gw.retrans"), from.AddMinutes(-10), to);
+            var keep = npaDrop.Detail.Contains("keepalive", StringComparison.OrdinalIgnoreCase);
+            if (tenantNear > 0)
+                C("A Internet da máquina caiu ou ficou instável (túnel NPA e tenant pararam de responder juntos)", "Rede", keep ? 0.82 : 0.7,
+                    $"{npaDrop.Time:HH:mm:ss} {npaDrop.Detail}; {tenantNear} falha(s) de comunicação com o tenant/GSLB no mesmo intervalo" + (retrans is double rt && rt > 0 ? $"; {rt:0} retransmissões em 5 min antes da queda." : "."),
+                    "Verifique o Wi-Fi/roteador/provedor no horário (o coletor deste app registra sinal, perda e latência a cada 30 s).", "npadrops");
+            else if (keep)
+                C("Caminho até o POP do Private Access instável (gateway deixou de responder)", "Rede", 0.65,
+                    $"{npaDrop.Time:HH:mm:ss} {npaDrop.Detail}" + (retrans is double rt2 && rt2 > 0 ? $"; {rt2:0} retransmissões em 5 min." : "."),
+                    "Teste o caminho até o POP (mtr/pathping na aba Diagnóstico) e compare com outro POP/rede.", "npadrops");
+            else if (npaDrop.Detail.Contains("DNS", StringComparison.Ordinal))
+                C("Falha de DNS ao localizar o gateway do Private Access", "DNS", 0.75, $"{npaDrop.Time:HH:mm:ss} {npaDrop.Detail}.", "Verifique os servidores DNS ativos e domínios de pesquisa (aba Rede).", "dnssuffix");
+        }
+
+        // mudanças de rede em excesso (interfaces virtuais)
+        var churn = r.Findings.FirstOrDefault(f => f.Key == "netchurn");
+        if (churn != null && Baseline.Worst(S("net.changes"), from.AddMinutes(-5), to) is double nch && nch >= 2)
+            C("Mudanças de rede em excesso (interfaces virtuais subindo e descendo)", "Rede", causes.Count == 0 ? 0.55 : 0.35,
+                $"{nch:0} mudança(s) de rede em 10 min perto do início. {churn.Title}.", churn.Action, "netchurn");
 
         // DNS
         var dnsHits = r.Findings.Where(f => f.Key == "dns").SelectMany(f => f.Times).Count(t => t >= from && t <= to)

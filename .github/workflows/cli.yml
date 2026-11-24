@@ -1,0 +1,31 @@
+name: Ferramenta de linha de comando (Linux)
+
+# Testa o motor de análise no Linux e publica o nla-cli (linux-x64) num rascunho de release
+# usado só para validação local de pacotes reais (nada de log vai para o repositório).
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: [ 'src/NetskopeLogAnalyzer.Core/**', 'tools/**', 'tests/**', '.github/workflows/cli.yml' ]
+
+permissions:
+  contents: write
+
+jobs:
+  cli:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Testes do motor
+        run: dotnet test tests/NetskopeLogAnalyzer.Tests/NetskopeLogAnalyzer.Tests.csproj -c Release
+      - name: Publicar nla-cli
+        run: dotnet publish tools/NetskopeLogAnalyzer.Cli/NetskopeLogAnalyzer.Cli.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -o cli
+      - name: Rascunho de release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete dev-cli -y 2>/dev/null || true
+          gh release create dev-cli cli/nla-cli --draft --title "nla-cli (validação)" --notes "Gerado automaticamente; não é uma versão."

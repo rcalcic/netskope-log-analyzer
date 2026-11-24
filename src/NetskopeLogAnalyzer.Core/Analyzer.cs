@@ -82,6 +82,8 @@ public sealed class Analyzer
     private readonly Dictionary<string, AppUsage> _apps = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<(DateTime Time, int Svc, string Ev)> _svcEvents = new();
     private DateTime? _collectedAt;
+    private readonly Dictionary<string, string> _texts = new(StringComparer.OrdinalIgnoreCase);
+    private TacInsights? _tac;
 
     // ------------------------------------------------------------------ entrada
 
@@ -150,6 +152,13 @@ public sealed class Analyzer
         {
             n++;
             var baseName = Path.GetFileName(it.Name.Replace('\\', '/'));
+            if (Regex.IsMatch(baseName, @"\.(pcap|pcapng|cap)$", RegexOptions.IgnoreCase))
+            {
+                progress?.Report($"Lendo captura {baseName}…");
+                _r.Files.Add(new LogFileInfo { Name = it.Name, Size = it.Data.Length });
+                _r.Captures.Add(PcapReader.Read(baseName, it.Data));
+                continue;
+            }
             if (SkipExt.IsMatch(baseName)) { _r.Skipped.Add(baseName); continue; }
             progress?.Report($"Analisando {baseName} ({n}/{items.Count})…");
             var text = Decode(it.Data);
@@ -167,6 +176,7 @@ public sealed class Analyzer
             if (Regex.IsMatch(baseName, @"\.(json|conf|bak)$", RegexOptions.IgnoreCase)) ParseJson(baseName, text);
             if (baseName.Equals("install.log", StringComparison.OrdinalIgnoreCase)) ParseInstall(text);
             if (Regex.IsMatch(baseName, "network-state|ipconfig|netstat", RegexOptions.IgnoreCase)) ParseNetworkState(text, baseName);
+            if (Regex.IsMatch(baseName, @"network-state|ipconfig|netstat|nmcli|resolv|route|ifconfig|ip[-_]?addr|scutil|ps[-_]?aux|process", RegexOptions.IgnoreCase) && text.Length < 20_000_000) _texts[baseName] = text;
             if (Regex.IsMatch(baseName, @"process|tasklist|ps[-_]?aux", RegexOptions.IgnoreCase)) ScanProcesses(text, baseName);
             if (baseName.StartsWith("appinfo", StringComparison.OrdinalIgnoreCase))
             {
@@ -183,12 +193,15 @@ public sealed class Analyzer
         _r.Entries.Sort((a, b) => a.Time.CompareTo(b.Time));
         _r.Unclassified.AddRange(_unc.Values.OrderByDescending(u => u.Count));
         _r.DetectedOs = DetectOs();
+        _tac = new TacInsights(_r, _texts, _json);
+        _tac.Run();
         foreach (var f in _r.Findings)
         {
             f.Steps.AddRange(KnowledgeBase.BuildSteps(f, _r.DetectedOs, _r.Facts.TenantHost));
             f.References.AddRange(KnowledgeBase.ReferencesFor(f.Key));
-            f.SearchQuery = KnowledgeBase.QueryFor(f.Key, f.Title);
+            if (f.SearchQuery.Length == 0) f.SearchQuery = KnowledgeBase.QueryFor(f.Key, f.Title);
         }
+        _r.Findings.Sort((a, b) => a.Severity != b.Severity ? a.Severity.CompareTo(b.Severity) : b.Count.CompareTo(a.Count));
         FinalizeMetrics();
         return _r;
     }
@@ -720,7 +733,8 @@ public sealed class Analyzer
             PerMinute("flows.tunnel", _flowTunnel);
             PerMinute("flows.bypass", _flowBypass);
             PerMinute("flows.udpblock", _flowUdp);
-            PerMinute("log.errors", _errTimes);
+            // só eventos relevantes (crítico/atenção), sem o ruído conhecido
+            PerMinute("log.errors", r.Findings.Where(f => f.Severity <= Severity.Warning).SelectMany(f => f.Times).ToList());
 
             // estados do túnel por serviço
             var stops = r.Events.Where(x => x.Label == "Serviço parado").Select(x => x.Time).ToList();
@@ -761,6 +775,9 @@ public sealed class Analyzer
         }
 
         r.Apps.AddRange(_apps.Values.OrderByDescending(a => a.Total));
+        _tac?.AfterMetrics();
+        foreach (var f in r.Findings.Where(f => f.SearchQuery.Length == 0)) f.SearchQuery = f.Title;
+        r.Findings.Sort((a, b) => a.Severity != b.Severity ? a.Severity.CompareTo(b.Severity) : b.Count.CompareTo(a.Count));
 
         if (!r.HasTelemetry)
             r.DataGaps.Add("Sem telemetria do coletor: o pacote de logs da Netskope não traz séries contínuas de CPU, memória, disco, Wi-Fi, bateria, perda/jitter nem testes de aplicação. Rode o coletor do Netskope Log Analyzer na máquina e analise de novo junto com o pacote para ter o baseline completo e uma causa raiz mais precisa.");
@@ -772,5 +789,6 @@ public sealed class Analyzer
         Baseline.Compute(r);
         ExperienceScore.Compute(r);
         RootCause.Analyze(r);
+        _tac?.Finish();
     }
 }

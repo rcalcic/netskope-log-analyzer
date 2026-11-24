@@ -36,8 +36,8 @@ public sealed class Finding
 {
     public required string Key { get; init; }
     public Severity Severity { get; set; }
-    public required string Category { get; init; }
-    public required string Title { get; init; }
+    public required string Category { get; set; }
+    public required string Title { get; set; }
     public required string Meaning { get; set; }
     public string Action { get; init; } = "";
     public int Count { get; set; }
@@ -132,6 +132,18 @@ public sealed class AnalysisResult
     public List<string> TelemetrySources { get; } = new();
     /// <summary>Avisos sobre dados ausentes (o que não pôde ser medido e por quê).</summary>
     public List<string> DataGaps { get; } = new();
+
+    // ---- v3.1: visão de TAC
+    public List<ConfigItem> Config { get; } = new();
+    public List<InterfaceDns> DnsInterfaces { get; } = new();
+    public List<SourceCoverage> Coverage { get; } = new();
+    public List<NpaSession> NpaSessions { get; } = new();
+    public List<PerfMetric> Performance { get; } = new();
+    public List<CaptureSummary> Captures { get; } = new();
+    /// <summary>Roteiro de perguntas do TAC respondido automaticamente (pergunta → resposta).</summary>
+    public List<KeyValuePair<string, string>> CaseSummary { get; } = new();
+    /// <summary>Componentes do score que tiveram dados (ex.: "Rede, Netskope"); vazio = completo.</summary>
+    public string? ScoreMissing { get; set; }
 
     public MetricSeries GetOrAddSeries(string key, Func<MetricSeries> create)
     {

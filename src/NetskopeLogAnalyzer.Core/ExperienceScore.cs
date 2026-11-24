@@ -44,6 +44,9 @@ public static class ExperienceScore
             foreach (var d in Prefix("disk.used:")) if (Baseline.Avg(d, w, we) is double du) { dev.Add(MetricCatalog.Grade(du, 85, 99)); if (du >= 95) notes.Add($"disco {du:0}%"); }
             if (Baseline.Avg(S("wifi.signal"), w, we) is double sig) { dev.Add(MetricCatalog.Grade(sig, 75, 25)); if (sig <= 40) notes.Add($"Wi-Fi {sig:0}%"); }
             else if (Baseline.Avg(S("wifi.rssi"), w, we) is double rssi) { dev.Add(MetricCatalog.Grade(rssi, -60, -85)); if (rssi <= -78) notes.Add($"Wi-Fi {rssi:0} dBm"); }
+            // sinais de desempenho derivados dos logs (sem coletor)
+            if (Baseline.Worst(S("perf.sched"), w, we) is double sd) { dev.Add(MetricCatalog.Grade(sd, 10, 180)); if (sd >= 60) notes.Add($"tarefas atrasadas {sd:0} s"); }
+            if (Baseline.Worst(S("perf.stall"), w, we) is double stl && stl > 0) { dev.Add(MetricCatalog.Grade(stl, 0, 10)); notes.Add($"{stl:0} travamento(s) interno(s)"); }
             double? device = dev.Count > 0 ? Blend(dev) : null;
 
             // ---- rede
@@ -53,6 +56,9 @@ public static class ExperienceScore
             foreach (var p in Prefix("ping.jitter:")) if (Baseline.Avg(p, w, we) is double jit) net.Add(MetricCatalog.Grade(jit, 10, 100));
             foreach (var p in Prefix("pop.best:")) if (Baseline.Avg(p, w, we) is double pr) { net.Add(MetricCatalog.Grade(pr, 30, 250)); if (pr >= 150) notes.Add($"POP {pr:0} ms"); }
             if (Baseline.Avg(S("dns.ms"), w, we) is double dnsMs) net.Add(MetricCatalog.Grade(dnsMs, 50, 1000));
+            if (Baseline.Worst(S("npa.gw.rtt"), w.AddMinutes(-5), we) is double grtt) { net.Add(MetricCatalog.Grade(grtt, 40, 400)); if (grtt >= 250) notes.Add($"RTT NPA {grtt:0} ms"); }
+            if (Baseline.Worst(S("npa.gw.retrans"), w.AddMinutes(-5), we) is double gre) { net.Add(MetricCatalog.Grade(gre, 20, 300)); if (gre >= 200) notes.Add($"{gre:0} retransmissões"); }
+            if (Baseline.Worst(S("net.changes"), w.AddMinutes(-5), we) is double nch && nch > 0) { net.Add(MetricCatalog.Grade(nch, 1, 12)); if (nch >= 6) notes.Add($"{nch:0} mudanças de rede"); }
             var netFails = tcpFail.Count(t => t >= w && t < we);
             if (netFails > 0) { net.Add(Math.Max(0, 100 - 30 * netFails)); notes.Add($"{netFails} falha(s) de DNS/TCP"); }
             double? network = net.Count > 0 ? Blend(net) : null;
@@ -89,6 +95,12 @@ public static class ExperienceScore
             r.Scores.Add(new ScoreWindow(w, we, Math.Round(score), R(device), R(network), R(ns), R(application), string.Join(", ", notes)));
         }
         if (r.Scores.Count > 0) r.Score = Math.Round(r.Scores.Average(s => s.Score));
+        var missing = new List<string>();
+        if (!r.Scores.Any(s => s.Device != null)) missing.Add("Dispositivo");
+        if (!r.Scores.Any(s => s.Network != null)) missing.Add("Rede");
+        if (!r.Scores.Any(s => s.Netskope != null)) missing.Add("Netskope");
+        if (!r.Scores.Any(s => s.App != null)) missing.Add("Aplicação");
+        r.ScoreMissing = missing.Count > 0 ? string.Join(", ", missing) : null;
     }
 
     private static double? R(double? v) => v is double d ? Math.Round(d) : null;

@@ -53,7 +53,7 @@ public static class KnowledgeBase
     {
         R("crash", @"segmentation fault|SIGSEGV|SIGABRT|core dumped|unhandled exception|terminate called|access violation", Severity.Critical, "Estabilidade",
             "Travamento (crash) de processo do Netskope", "Um processo do cliente encerrou de forma anormal.",
-            "Anote horário e versão, colete o pacote logo após o evento e abra chamado no suporte Netskope.", any: true, ci: true),
+            "Veja qual processo travou e o horário; atualize o cliente para a versão mais recente (ou a golden release do tenant) e, se repetir, reinstale.", any: true, ci: true),
         R("disk", @"No space left on device", Severity.Critical, "Sistema", "Disco cheio",
             "O sistema não tem espaço para gravar arquivos; configuração e logs podem ficar corrompidos.", "Libere espaço em disco e reinicie o serviço do Netskope.", any: true, ci: true),
         R("ssl", @"code (35|51|58|60),|SSL certificate problem|certificate verify failed|unable to get local issuer|SSL_ERROR|handshake fail", Severity.Critical, "Certificados",
@@ -113,7 +113,7 @@ public static class KnowledgeBase
             "O console pode mostrar status desatualizado deste dispositivo.", "É reenviado automaticamente.", ci: true, q: "client status"),
         R("dem", @"DEM .*fail", Severity.Info, "Configuração", "Falha no envio de dados de DEM", "Monitoramento de experiência digital não enviou status.", "Sem impacto no tráfego.", ci: true, q: "DEM"),
         R("npawait", @"cannot be completed within \d+ ms", Severity.Info, "Túnel", "Lentidão interna do módulo NPA", "Uma operação interna do Private Access demorou além do esperado.", "Sem ação se isolado."),
-        R("broker", @"No Primary broker configured", Severity.Info, "Túnel", "Nenhum broker NPA primário configurado", "Mensagem de seleção de gateway do NPA; o cliente usa a lista do GSLB.", "Sem ação."),
+        R("broker", @"No Primary broker configured", Severity.Noise, "Ruído", "Nenhum broker NPA primário configurado", "Mensagem de seleção de gateway do NPA; o cliente usa a lista do GSLB.", "Sem ação."),
         R("bwan", @"bwan|Bwan", Severity.Noise, "Ruído", "Módulo SD-WAN ausente", "Mensagens do Endpoint SD-WAN (bwanclient). Esperado quando o SD-WAN não está instalado/em uso.", "Nenhuma.", q: "bwan"),
         R("perm", @"err: 13|Permission denied", Severity.Info, "Sistema", "Permissão negada ao gravar arquivo", "Algum processo do usuário tentou gravar em pasta protegida.", "Veja o arquivo citado nos exemplos.", q: "err: 13"),
         R("decrypt", @"Invalid decryption of protected file|decrypt file failed|nsEncryption invalid parameters", Severity.Noise, "Ruído", "Arquivos protegidos ainda não criados",

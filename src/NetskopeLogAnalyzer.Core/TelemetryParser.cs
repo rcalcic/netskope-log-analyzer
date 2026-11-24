@@ -209,7 +209,7 @@ public static class TelemetryParser
         r.TelemetrySources.Add(fileName);
     }
 
-    public static string Fmt(TimeSpan t) => t.TotalHours >= 1 ? $"{(int)t.TotalHours}h{t.Minutes:00}min" : t.TotalMinutes >= 1 ? $"{(int)t.TotalMinutes}min{t.Seconds:00}s" : $"{t.Seconds}s";
+    public static string Fmt(TimeSpan t) => t.TotalDays >= 2 ? $"{(int)t.TotalDays}d{t.Hours:00}h" : t.TotalHours >= 1 ? $"{(int)t.TotalHours}h{t.Minutes:00}min" : t.TotalMinutes >= 1 ? $"{(int)t.TotalMinutes}min{t.Seconds:00}s" : $"{t.Seconds}s";
 
     private static (string, EventKind) EventLabel(string type) => type switch
     {
