@@ -7,6 +7,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Win32;
 using NetskopeLogAnalyzer.Core;
@@ -21,6 +22,7 @@ namespace NetskopeLogAnalyzer.Services;
 /// </summary>
 public sealed class TelemetryCollector : IDisposable
 {
+    private static readonly JsonSerializerOptions JsonOpts = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     public const string MutexName = @"Local\NetskopeLogAnalyzer.Collector";
     public const string StopEventName = @"Local\NetskopeLogAnalyzer.Collector.Stop";
 
@@ -93,7 +95,7 @@ public sealed class TelemetryCollector : IDisposable
         var now = DateTimeOffset.Now;
         var o = new Dictionary<string, object?> { ["t"] = now.ToString("yyyy-MM-ddTHH:mm:ss.fffzzz", CultureInfo.InvariantCulture), ["k"] = k };
         foreach (var kv in fields) if (kv.Value != null) o[kv.Key] = kv.Value;
-        var line = JsonSerializer.Serialize(o);
+        var line = JsonSerializer.Serialize(o, JsonOpts);
         lock (_lock)
         {
             if (_w is null || now.Date != _fileDay)
@@ -103,7 +105,7 @@ public sealed class TelemetryCollector : IDisposable
                 CurrentFile = Path.Combine(AppSettings.TelemetryDir, $"nla-telemetry-{_host}-{now:yyyyMMdd}.jsonl");
                 var isNew = !File.Exists(CurrentFile);
                 _w = new StreamWriter(new FileStream(CurrentFile, FileMode.Append, FileAccess.Write, FileShare.ReadWrite), new UTF8Encoding(false)) { AutoFlush = true };
-                if (isNew || k != "meta") _w.WriteLine(JsonSerializer.Serialize(Meta(now)));
+                if (isNew || k != "meta") _w.WriteLine(JsonSerializer.Serialize(Meta(now), JsonOpts));
             }
             _w.WriteLine(line);
         }
@@ -448,13 +450,15 @@ public sealed class TelemetryCollector : IDisposable
         using var ping = new Ping();
         var hops = new List<Dictionary<string, object?>>();
         var buffer = new byte[32];
+        var silent = 0;
         for (var ttl = 1; ttl <= 24; ttl++)
         {
             var sw = Stopwatch.StartNew();
             PingReply? r = null;
             try { r = await ping.SendPingAsync(target, 1500, buffer, new PingOptions(ttl, true)); } catch (PingException) { }
             var ms = Math.Round(sw.Elapsed.TotalMilliseconds, 1);
-            if (r is null || r.Status == IPStatus.TimedOut) { hops.Add(new() { ["ttl"] = ttl, ["ip"] = "*" }); continue; }
+            if (r is null || r.Status == IPStatus.TimedOut) { hops.Add(new() { ["ttl"] = ttl, ["ip"] = "*" }); if (++silent >= 6) break; continue; }
+            silent = 0;
             hops.Add(new() { ["ttl"] = ttl, ["ip"] = r.Address?.ToString(), ["rtt"] = r.Status == IPStatus.Success && r.RoundtripTime > 0 ? r.RoundtripTime : ms });
             if (r.Status == IPStatus.Success) break;
         }
