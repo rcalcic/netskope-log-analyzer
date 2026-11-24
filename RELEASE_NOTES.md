@@ -1,4 +1,7 @@
-**Netskope Log Analyzer 2.0.0 — app nativo para Windows**
+**Netskope Log Analyzer 2.0.1 — app nativo para Windows**
+
+- 2.0.1: a janela se ajusta à área útil da tela em notebooks e monitores pequenos.
+
 
 - Reescrito em **C#/.NET 8 (WPF)**: não depende de navegador, Edge ou WebView2. Executável único e autocontido (não precisa do .NET instalado).
 - Mesmo diagnóstico da versão anterior: ~40 padrões conhecidos, resolução passo a passo com comandos e botão *Copiar*, documentação oficial, linha do tempo, gráfico de erros, explorador de logs.

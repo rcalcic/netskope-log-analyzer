@@ -57,6 +57,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // ajusta a janela à área útil da tela (notebooks e telas pequenas)
+        var wa = SystemParameters.WorkArea;
+        Width = Math.Min(Width, wa.Width * 0.94);
+        Height = Math.Min(Height, wa.Height * 0.94);
+        MinWidth = Math.Min(MinWidth, Width);
+        MinHeight = Math.Min(MinHeight, Height);
         var v = Assembly.GetExecutingAssembly().GetName().Version;
         TxtVersion.Text = v is null ? "" : $"v{v.Major}.{v.Minor}.{v.Build}";
         _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); RunExplorer(); };
