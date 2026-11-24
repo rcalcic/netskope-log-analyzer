@@ -1,0 +1,7 @@
+dist/
+build/
+# nunca versionar logs reais
+NetskopeLogs*.zip
+*.log
+*.pcap
+authtoken.pem

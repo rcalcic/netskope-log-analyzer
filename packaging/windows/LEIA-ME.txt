@@ -1,0 +1,22 @@
+NETSKOPE LOG ANALYZER - v__VERSION__
+====================================
+
+INSTALAR (Windows 10/11, sem precisar de administrador)
+ 1. Extraia este .zip inteiro para uma pasta.
+ 2. Dê dois cliques em "Instalar.cmd".
+    - Se o Windows SmartScreen avisar, clique em "Mais informações" > "Executar assim mesmo".
+ 3. O app abre sozinho e ganha atalhos no Menu Iniciar e na Área de Trabalho.
+
+O app é instalado em %LOCALAPPDATA%\NetskopeLogAnalyzer e abre em janela
+própria usando o Microsoft Edge (ou Chrome) em modo aplicativo.
+
+USAR
+ - Arraste o .zip gerado pelo Netskope Client ("Save logs" / nsdiag -o) para a janela.
+ - Toda a análise roda localmente: nenhum log sai do computador.
+
+DESINSTALAR
+ - Configurações > Aplicativos > Aplicativos instalados > "Netskope Log Analyzer", ou
+ - Execute "Desinstalar.cmd" desta pasta.
+
+VERSÃO PORTÁTIL (sem instalar)
+ - Abra app\index.html diretamente no Edge ou Chrome.
