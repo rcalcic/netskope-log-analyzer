@@ -27,7 +27,7 @@ public static class ExperienceScore
         MetricSeries? S(string key) => r.Series.TryGetValue(key, out var s) ? s : null;
         IEnumerable<MetricSeries> Prefix(string p) => r.Series.Values.Where(s => s.Key.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
-        var failTimes = r.Findings.Where(f => NetskopeFailureKeys.Contains(f.Key)).SelectMany(f => f.Times).OrderBy(t => t).ToList();
+        var failTimes = r.Findings.Where(f => NetskopeFailureKeys.Contains(f.Key) && f.Severity != Severity.Noise).SelectMany(f => f.Times).OrderBy(t => t).ToList();
         var states = r.States.Where(s => s.Service is "Internet" or "Private Access").ToList();
         var httpFail = r.Events.Where(e => e.Label == "Falha no teste HTTP").Select(e => e.Time).ToList();
         var tcpFail = r.Events.Where(e => e.Label is "Falha de conexão TCP" or "Falha de DNS").Select(e => e.Time).ToList();

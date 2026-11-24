@@ -165,6 +165,8 @@ public partial class MainWindow : Window
         RenderDevice();
         RenderNetwork();
         RenderApps();
+        RenderPerformance();
+        RenderConfig();
         int prob = _result.Count(Severity.Critical) + _result.Count(Severity.Warning);
         TabFindings.Header = $"Diagnóstico ({prob})";
         TabUnclassified.Header = $"Não classificados ({_result.Unclassified.Count})";
@@ -292,6 +294,7 @@ public partial class MainWindow : Window
         }
         grid.Children.Add(facts);
         SummaryPanel.Children.Add(grid);
+        SummaryPanel.Children.Add(CaseSummaryBlock());
     }
 
     private UIElement ServiceElement(int svc, string? fallback)

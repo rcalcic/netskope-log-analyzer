@@ -23,7 +23,14 @@ public sealed class NpaSession
     public string? EndReason { get; set; }
     public bool Expected { get; set; }
     public DateTime? ReconnectedAt { get; set; }
-    public TimeSpan? Downtime => End is DateTime e && ReconnectedAt is DateTime r && r > e ? r - e : null;
+    /// <summary>A sessão terminou porque o próprio cliente parou o Private Access (reinício do serviço, on-prem, desativação).</summary>
+    public bool Stopped { get; set; }
+    /// <summary>Depois de uma queda, o cliente parou o NPA antes de conseguir reconectar.</summary>
+    public DateTime? StoppedAt { get; set; }
+    public int Attempts { get; set; }
+    public DateTime? FirstRetryAt { get; set; }
+    /// <summary>Tempo sem túnel após a queda, descontando períodos em que a máquina estava inativa.</summary>
+    public TimeSpan? Downtime { get; set; }
 }
 
 /// <summary>Métrica de desempenho no estilo do DEM, derivada só dos logs (sem coletor).</summary>

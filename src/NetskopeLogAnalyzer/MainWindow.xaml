@@ -121,6 +121,12 @@
           </ScrollViewer>
         </TabItem>
 
+        <TabItem x:Name="TabPerformance" Header="Desempenho">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="PerformancePanel" Margin="8,16,8,24"/>
+          </ScrollViewer>
+        </TabItem>
+
         <TabItem x:Name="TabTimeline" Header="Linha do tempo">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="8,16,8,24">
@@ -171,6 +177,12 @@
         <TabItem x:Name="TabApps" Header="Aplicações">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="AppsPanel" Margin="8,16,8,24"/>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="TabConfig" Header="Configuração">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ConfigPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 

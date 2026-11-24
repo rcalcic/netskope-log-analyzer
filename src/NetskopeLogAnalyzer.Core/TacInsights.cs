@@ -165,6 +165,15 @@ public sealed class TacInsights
             if (prev is DateTime p && e.Time - p >= threshold) _gaps.Add((p, e.Time));
             prev = e.Time;
         }
+        // ilhas curtas de atividade (alguns logs periódicos) entre dois períodos inativos não contam como máquina ativa
+        for (var i = _gaps.Count - 2; i >= 0; i--)
+        {
+            if ((_gaps[i + 1].Start - _gaps[i].End).TotalMinutes <= 3)
+            {
+                _gaps[i] = (_gaps[i].Start, _gaps[i + 1].End);
+                _gaps.RemoveAt(i + 1);
+            }
+        }
         foreach (var (a, b) in _gaps)
             _r.Events.Add(new TimelineEvent(a, "Suspensão", EventKind.Info, $"nenhum log de {a:dd/MM HH:mm} a {b:dd/MM HH:mm} ({TelemetryParser.Fmt(b - a)}) — máquina suspensa, desligada ou sem o serviço", "logs"));
     }
@@ -659,11 +668,13 @@ public sealed class TacInsights
         var procs = _r.Snapshots.SelectMany(s => s.Processes).Select(p => p.Name).ToList();
         foreach (var f in _r.Findings)
         {
-            if (f.Key == "firefox" && !procs.Any(p => p.Contains("firefox", StringComparison.OrdinalIgnoreCase)) && f.Samples.All(s => Regex.IsMatch(s, "snap|sanp|FF Snap", RegexOptions.IgnoreCase)))
+            var appInfo = _texts.FirstOrDefault(kv => kv.Key.StartsWith("appinfo", StringComparison.OrdinalIgnoreCase)).Value;
+            var firefoxInstalled = appInfo is null || appInfo.Contains("firefox", StringComparison.OrdinalIgnoreCase);
+            if (f.Key == "firefox" && !procs.Any(p => p.Contains("firefox", StringComparison.OrdinalIgnoreCase)) && (!firefoxInstalled || f.Samples.All(s => Regex.IsMatch(s, "snap|sanp|FF Snap", RegexOptions.IgnoreCase))))
             {
                 f.Severity = Severity.Noise; f.Category = "Ruído";
-                f.Title = "CA do Netskope não copiada para o Firefox Snap (Firefox Snap não está em uso)";
-                f.Meaning = "O cliente tenta copiar a CA para o Firefox instalado via Snap; a pasta não existe. Sem Firefox Snap em execução, não há impacto. " + f.Meaning;
+                f.Title = firefoxInstalled ? "CA do Netskope não copiada para o Firefox Snap (Firefox Snap não está em uso)" : "CA do Netskope não copiada para o Firefox (Firefox não está instalado)";
+                f.Meaning = "O cliente tenta copiar a CA para as pastas do Firefox, que não existem nesta máquina. Sem Firefox em uso, não há impacto. " + f.Meaning;
             }
             if (f.Key == "http" && f.Files.Count > 0 && f.Files.All(n => n.StartsWith("nsAppUI", StringComparison.OrdinalIgnoreCase)) && f.Details.Any(d => d.Key.Contains("403") || d.Key.Contains("longpoll")))
             {
@@ -672,6 +683,11 @@ public sealed class TacInsights
                 f.Meaning = "A interface do cliente (stAgentUI) consulta o tenant a cada poucos segundos para receber notificações e recebe 403. Não afeta túnel nem navegação, mas gera muitas linhas e faz o nsAppUI.log girar rápido, apagando histórico útil. " + f.Meaning;
             }
             if (f.Key == "broker") { f.Severity = Severity.Noise; f.Category = "Ruído"; }
+            if (f.Key is "dns" or "timeout" or "conn" && f.Files.Count > 0 && f.Files.All(n => n.StartsWith("nsAppUI", StringComparison.OrdinalIgnoreCase)))
+            {
+                f.Severity = Severity.Info;
+                f.Meaning = "Só a interface do usuário (stAgentUI) falhou — normalmente porque a máquina estava sem rede. Não afeta o túnel; serve como indicador de quando a rede caiu. " + f.Meaning;
+            }
         }
         var churn = _r.Findings.FirstOrDefault(f => f.Key == "netchurn");
         if (churn != null)
@@ -784,11 +800,34 @@ public sealed class TacInsights
                 reasonAt = e.Time;
                 continue;
             }
+            if (m.Contains("npaClientHandlerStop", StringComparison.Ordinal) || m.Contains("Will shutdown NPA handler", StringComparison.Ordinal))
+            {
+                if (cur != null && cur.End is null)
+                {
+                    cur.End = e.Time; cur.Stopped = true; cur.Expected = true;
+                    cur.EndReason = "Private Access parado pelo próprio cliente (reinício do serviço, rede da empresa ou desativação)";
+                    _r.Events.Add(new TimelineEvent(e.Time, "Private Access parado", EventKind.Info, cur.EndReason, file));
+                }
+                else if (_r.NpaSessions.LastOrDefault() is NpaSession last && last.End != null && last.ReconnectedAt is null && last.StoppedAt is null && !last.Stopped)
+                    last.StoppedAt = e.Time;
+                continue;
+            }
+            if (m.Contains("NPA Client is connecting", StringComparison.Ordinal))
+            {
+                if (_r.NpaSessions.LastOrDefault() is NpaSession last && last.End != null && last.ReconnectedAt is null && last.StoppedAt is null && !last.Stopped)
+                {
+                    last.Attempts++;
+                    last.FirstRetryAt ??= e.Time;
+                }
+                continue;
+            }
             if (m.Contains("Failed to resolve GW", StringComparison.Ordinal)) { reason = "Não conseguiu resolver gateway.npa.goskope.com (DNS)"; reasonAt = e.Time; expected = false; continue; }
             if (m.Contains("Broken pipe", StringComparison.Ordinal) && reason is null) { reason = "Conexão TCP com o gateway interrompida (broken pipe)"; reasonAt = e.Time; continue; }
             if (m.Contains("NPA Tunnel is disconnected", StringComparison.Ordinal))
             {
-                if (cur is null || cur.End != null)
+                if (cur != null && cur.End is DateTime prevEnd && (e.Time - prevEnd).TotalSeconds <= 5) continue; // mesma queda registrada duas vezes
+                if (cur != null && cur.End != null) continue; // desconexão de conexão auxiliar, sem sessão ativa
+                if (cur is null)
                 {
                     // sessão começou antes do início do log
                     var start = _npaFirst ?? e.Time;
@@ -807,12 +846,29 @@ public sealed class TacInsights
         }
         // POP para sessões sem nome
         foreach (var s in _r.NpaSessions.Where(s => s.Pop is null && s.GatewayIp != null)) s.Pop = PopName(s.GatewayIp!);
+        foreach (var s in _r.NpaSessions.Where(s => s.End != null && !s.Stopped))
+        {
+            var back = s.ReconnectedAt ?? s.StoppedAt;
+            if (back is DateTime b && b > s.End!.Value) s.Downtime = ActiveTime(s.End!.Value, b);
+        }
         foreach (var s in _r.NpaSessions.Where(s => s.ReconnectedAt is DateTime))
-            _r.Events.Add(new TimelineEvent(s.ReconnectedAt!.Value, "Private Access reconectado", EventKind.Good, $"após {TelemetryParser.Fmt(s.Downtime ?? TimeSpan.Zero)}", file));
+            _r.Events.Add(new TimelineEvent(s.ReconnectedAt!.Value, "Private Access reconectado", EventKind.Good, $"após {TelemetryParser.Fmt(s.Downtime ?? TimeSpan.Zero)}" + (s.Attempts > 1 ? $" e {s.Attempts} tentativas" : ""), file));
 
         if (_r.NpaSessions.Count == 0) return;
         BuildNpaStates();
         NpaFindings();
+    }
+
+    /// <summary>Duração de [a, b] descontando os períodos sem atividade.</summary>
+    private TimeSpan ActiveTime(DateTime a, DateTime b)
+    {
+        var total = b - a;
+        foreach (var g in _gaps)
+        {
+            var s = g.Start > a ? g.Start : a; var e = g.End < b ? g.End : b;
+            if (e > s) total -= e - s;
+        }
+        return total < TimeSpan.Zero ? TimeSpan.Zero : total;
     }
 
     private bool NearNetChange(DateTime t) => _netChanges.Any(c => Math.Abs((c - t).TotalSeconds) <= 15);
@@ -838,8 +894,15 @@ public sealed class TacInsights
             if (sEnd > s.Start) states.Add(new StateInterval("Private Access", "Conectado", s.Start, sEnd));
             if (s.End is DateTime de)
             {
-                var back = s.ReconnectedAt ?? (i + 1 < sessions.Count ? sessions[i + 1].Start : end);
+                var next = i + 1 < sessions.Count ? sessions[i + 1].Start : end;
+                if (s.Stopped)
+                {
+                    if (next > de) states.Add(new StateInterval("Private Access", "Parado pelo cliente", de, next));
+                    continue;
+                }
+                var back = s.ReconnectedAt ?? s.StoppedAt ?? next;
                 if (back > de) states.Add(new StateInterval("Private Access", s.Expected ? "Reautenticando" : "Desconectado", de, back));
+                if (s.ReconnectedAt is null && s.StoppedAt is DateTime sa && next > sa) states.Add(new StateInterval("Private Access", "Parado pelo cliente", sa, next));
             }
         }
         // períodos sem nenhuma atividade (suspensão/desligada) não contam como queda nem como conectado
@@ -873,7 +936,7 @@ public sealed class TacInsights
         double up = 0, total = 0;
         foreach (var st in cut)
         {
-            if (st.State.StartsWith("Sem atividade", StringComparison.Ordinal)) continue;
+            if (st.State.StartsWith("Sem atividade", StringComparison.Ordinal) || st.State == "Parado pelo cliente") continue;
             total += st.Duration.TotalSeconds;
             if (st.State is "Conectado" or "Reautenticando") up += st.Duration.TotalSeconds;
         }
@@ -883,7 +946,9 @@ public sealed class TacInsights
     private void NpaFindings()
     {
         var drops = _r.NpaSessions.Where(s => s.End != null && !s.Expected).ToList();
-        var reauth = _r.NpaSessions.Where(s => s.End != null && s.Expected).ToList();
+        var reauth = _r.NpaSessions.Where(s => s.End != null && s.Expected && !s.Stopped).ToList();
+        var retry = drops.Where(d => d.FirstRetryAt != null).Select(d => (d.FirstRetryAt!.Value - d.End!.Value).TotalSeconds).OrderBy(x => x).ToList();
+        var multi = drops.Count(d => d.Attempts > 1);
         var days = Math.Max(1, ((_npaLast ?? DateTime.Now) - (_npaFirst ?? DateTime.Now)).TotalDays);
         if (drops.Count > 0)
         {
@@ -900,7 +965,9 @@ public sealed class TacInsights
                 {
                     $"Média de {drops.Count / days:0.#} queda(s) por dia; pior dia {perDay[0].Key:dd/MM} com {perDay[0].Count()}.",
                     clusters.Count > 0 ? "Quedas em sequência (3 ou mais na mesma hora): " + string.Join("; ", clusters.Take(5).Select(c => $"{c.Start:dd/MM HH:mm}–{c.End:HH:mm} ({c.Count})")) + "." : "",
-                    downs.Count > 0 ? $"Tempo até reconectar: mediana {TelemetryParser.Fmt(TimeSpan.FromSeconds(downs[downs.Count / 2]))}, máximo {TelemetryParser.Fmt(TimeSpan.FromSeconds(downs[^1]))}." : "",
+                    downs.Count > 0 ? $"Tempo sem o túnel em cada queda: mediana {TelemetryParser.Fmt(TimeSpan.FromSeconds(downs[downs.Count / 2]))}, máximo {TelemetryParser.Fmt(TimeSpan.FromSeconds(downs[^1]))}." : "",
+                    retry.Count > 0 && retry[retry.Count / 2] >= 90 ? $"O cliente só tenta reconectar cerca de {TelemetryParser.Fmt(TimeSpan.FromSeconds(retry[retry.Count / 2]))} depois da queda (mediana) — boa parte do tempo fora é essa espera, mesmo que a rede volte antes." : "",
+                    multi > 0 ? $"{multi} queda(s) precisaram de mais de uma tentativa de reconexão." : "",
                     keep > 0 ? "“Keepalive falhou” significa que o gateway deixou de responder por ~15 s: a conexão TCP até o POP ficou sem tráfego de volta." : "",
                     withTenant > 0 ? $"Em {withTenant} das quedas o cliente também falhou ao falar com o tenant/GSLB no mesmo horário — sinal de que a Internet da máquina caiu ou ficou instável, não de problema no Netskope." : "",
                 }.Where(x => x.Length > 0)),
@@ -965,7 +1032,7 @@ public sealed class TacInsights
         {
             var target = MetricCatalog.Split(s.Key).Target ?? "";
             var pop = target.Contains(' ') ? target[(target.LastIndexOf(' ') + 1)..] : target;
-            if (s.Points.Count < 5) continue;
+            if (s.Points.Count < 5 || Regex.IsMatch(pop, @"^\d+\.\d+\.\d+\.\d+$")) continue;
             var m = Median(s.Points.Select(p => p.Value));
             if (!med.TryGetValue(pop, out var cur) || s.Points.Count > cur.N) med[pop] = (m, s.Points.Count);
         }
@@ -1010,6 +1077,8 @@ public sealed class TacInsights
             var fail = c.DnsRcodes.Where(kv => kv.Key is "SERVFAIL" or "REFUSED").Sum(kv => kv.Value);
             if (fail >= 5) issues.Add($"{fail} respostas DNS com falha (SERVFAIL/REFUSED)");
             if (issues.Count == 0) continue;
+            var outside = c.Last is DateTime cl && (cl < (_npaFirst ?? _svcFirst ?? DateTime.MinValue) || c.First > (_svcLast ?? _npaLast ?? DateTime.MaxValue));
+            if (outside) issues.Add("atenção: a captura é de um período diferente do coberto pelos logs principais");
             var f = new Finding
             {
                 Key = "pcap", Severity = c.RetransPct >= 8 || c.HandshakeFailures >= 30 ? Severity.Warning : Severity.Info, Category = "Rede",
@@ -1034,6 +1103,13 @@ public sealed class TacInsights
     {
         Performance();
         CaseSummary();
+    }
+
+    private static double Pct(List<double> sorted, double q)
+    {
+        if (sorted.Count == 0) return double.NaN;
+        var pos = q * (sorted.Count - 1); var lo = (int)Math.Floor(pos); var hi = Math.Min(sorted.Count - 1, lo + 1);
+        return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
     }
 
     private static string St(double v, double warn, double crit, bool higherWorse = true) =>
@@ -1067,7 +1143,7 @@ public sealed class TacInsights
         if (S("perf.sched") is MetricSeries sch)
         {
             var v = sch.Points.Select(p => p.Value).OrderBy(x => x).ToList();
-            P(MetricCatalog.Device, "Atraso das tarefas periódicas do cliente", $"mediana {N(Median(v))} s · p95 {N(v[(int)(0.95 * (v.Count - 1))])} s · máx. {N(v[^1])} s", "≤ 20 s", St(v[(int)(0.95 * (v.Count - 1))], 20, 120),
+            P(MetricCatalog.Device, "Atraso das tarefas periódicas do cliente", $"mediana {N(Median(v))} s · p95 {N(Pct(v, 0.95))} s · máx. {N(v[^1])} s", "≤ 20 s", St(Pct(v, 0.95), 20, 120),
                 "O túnel NPA registra estatísticas a cada 5 min; quanto ele atrasa mostra se a máquina estava sobrecarregada (CPU/disco) ou entrou em suspensão rápida — o equivalente do DEM para “responsividade do dispositivo”.", "perf.sched");
         }
         if (_stalls.Count > 0)
@@ -1097,7 +1173,7 @@ public sealed class TacInsights
         foreach (var s in r.Series.Values.Where(s => s.Key.StartsWith("pop.best:", StringComparison.OrdinalIgnoreCase) && s.Points.Count > 0))
         {
             var v = s.Points.Select(p => p.Value).OrderBy(x => x).ToList();
-            var p95 = v[(int)(0.95 * (v.Count - 1))];
+            var p95 = Pct(v, 0.95);
             P(MetricCatalog.Network, "Latência até o melhor POP — " + MetricCatalog.Split(s.Key).Target, $"mediana {N(Median(v), "0")} ms · p95 {N(p95, "0")} ms · máx. {N(v[^1], "0")} ms", "≤ 80 ms", St(p95, 80, 150),
                 "Medida pelo próprio cliente (TCP) a cada seleção de gateway.", s.Key);
         }
@@ -1121,13 +1197,13 @@ public sealed class TacInsights
         if (S("npa.gw.rtt") is MetricSeries gr)
         {
             var v = gr.Points.Select(p => p.Value).OrderBy(x => x).ToList();
-            var p95 = v[(int)(0.95 * (v.Count - 1))];
+            var p95 = Pct(v, 0.95);
             P("Netskope", "RTT até o gateway do Private Access", $"mediana {N(Median(v), "0")} ms · p95 {N(p95, "0")} ms · máx. {N(v[^1], "0")} ms", "≤ 80 ms", St(p95, 80, 250), "Medido pelo próprio túnel a cada 5 min (RTT do TCP).", "npa.gw.rtt");
         }
         if (S("npa.gw.retrans") is MetricSeries rt)
         {
             var v = rt.Points.Select(p => p.Value).OrderBy(x => x).ToList();
-            P("Netskope", "Retransmissões TCP do túnel Private Access", $"mediana {N(Median(v), "0")} · máx. {N(v[^1], "0")} por 5 min", "< 50 por 5 min", St(v[(int)(0.95 * (v.Count - 1))], 50, 200),
+            P("Netskope", "Retransmissões TCP do túnel Private Access", $"mediana {N(Median(v), "0")} · máx. {N(v[^1], "0")} por 5 min", "< 50 por 5 min", St(Pct(v, 0.95), 50, 200),
                 "Segmentos reenviados por perda no caminho até o POP. Picos antes de uma queda apontam Wi-Fi/provedor.", "npa.gw.retrans");
         }
         if (r.Findings.FirstOrDefault(f => f.Key == "gslb") is Finding g)

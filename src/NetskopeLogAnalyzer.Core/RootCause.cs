@@ -21,7 +21,7 @@ public static class RootCause
         // 1) quedas de túnel (por serviço), até a próxima reconexão
         foreach (var s in r.States.Where(x => x.State != "Conectado" && x.State != "Habilitado" && x.Service is "Internet" or "Private Access"))
         {
-            if (s.State is "Serviço parado" or "Reautenticando" || s.State.StartsWith("Sem atividade", StringComparison.Ordinal)) continue;
+            if (s.State is "Serviço parado" or "Reautenticando" or "Parado pelo cliente" || s.State.StartsWith("Sem atividade", StringComparison.Ordinal)) continue;
             var sev = s.Duration.TotalMinutes >= 5 ? Severity.Critical : Severity.Warning;
             incidents.Add(new Incident
             {
@@ -34,7 +34,7 @@ public static class RootCause
         // 2) rajadas de falhas com o tenant / DNS / NPA
         void Bursts(string[] keys, string title, string kind, string? findingKey, int min)
         {
-            var times = r.Findings.Where(f => keys.Contains(f.Key)).SelectMany(f => f.Times).OrderBy(t => t).ToList();
+            var times = r.Findings.Where(f => keys.Contains(f.Key) && f.Severity <= Severity.Warning).SelectMany(f => f.Times).OrderBy(t => t).ToList();
             foreach (var (a, b, n) in Clusters(times, TimeSpan.FromMinutes(2)))
             {
                 if (n < min) continue;
@@ -48,7 +48,7 @@ public static class RootCause
         }
         Bursts(TenantFailKeys, "Falhas de comunicação com o tenant Netskope", "tenant", "timeout", 3);
         Bursts(new[] { "dns" }, "Falhas de resolução DNS", "dns", "dns", 2);
-        Bursts(new[] { "npagw" }, "Private Access: conexão com o gateway caiu", "npa", "npagw", 1);
+        if (r.NpaSessions.Count == 0) Bursts(new[] { "npagw" }, "Private Access: conexão com o gateway caiu", "npa", "npagw", 1);
 
         // 3) experiência ruim (janelas consecutivas com score <= 30)
         foreach (var (a, b, n) in Clusters(r.Scores.Where(s => s.Score <= 30).Select(s => s.Start).ToList(), ExperienceScore.Window + TimeSpan.FromSeconds(1)))
@@ -64,7 +64,8 @@ public static class RootCause
                 incidents.Add(new Incident { Title = "Aplicações/POP inacessíveis nos testes do coletor", Start = a, End = b, Kind = "aplicação", Severity = Severity.Warning, Impact = $"{n} teste(s) com falha." });
 
         // 5) anomalias críticas de dispositivo/rede sem outro incidente (ex.: CPU a 100%)
-        foreach (var an in r.Anomalies.Where(x => x.Critical && x.Group is MetricCatalog.Device or MetricCatalog.Wifi or MetricCatalog.Network))
+        foreach (var an in r.Anomalies.Where(x => x.Critical && x.Group is MetricCatalog.Device or MetricCatalog.Wifi or MetricCatalog.Network
+                     && !x.SeriesKey.StartsWith("npa.dns", StringComparison.Ordinal) && !x.SeriesKey.StartsWith("net.changes", StringComparison.Ordinal)))
             incidents.Add(new Incident
             {
                 Title = $"{an.Label} em nível crítico", Start = an.Start, End = an.End > an.Start ? an.End : an.Start.AddSeconds(30), Kind = "métrica", Severity = Severity.Warning,
@@ -183,7 +184,7 @@ public static class RootCause
         var npaDrop = inWin.LastOrDefault(e => e.Label == "Private Access desconectado");
         if (npaDrop != null)
         {
-            var tenantNear = r.Findings.Where(f => TenantFailKeys.Contains(f.Key)).SelectMany(f => f.Times).Count(t => t >= from && t <= inc.End.AddMinutes(2));
+            var tenantNear = r.Findings.Where(f => TenantFailKeys.Contains(f.Key) && f.Severity != Severity.Noise).SelectMany(f => f.Times).Count(t => t >= from && t <= inc.End.AddMinutes(2));
             var retrans = Baseline.Worst(S("npa.gw.retrans"), from.AddMinutes(-10), to);
             var keep = npaDrop.Detail.Contains("keepalive", StringComparison.OrdinalIgnoreCase);
             if (tenantNear > 0)
@@ -231,7 +232,7 @@ public static class RootCause
             C("Disco quase cheio", "Dispositivo", 0.6, $"Apenas {diskMin:0.#} GB livres.", "Libere espaço; o cliente precisa gravar configuração e logs.", "disk");
 
         // tenant/POP inacessível (falhas sem causa local aparente)
-        var tenantHits = r.Findings.Where(f => TenantFailKeys.Contains(f.Key)).SelectMany(f => f.Times).Count(t => t >= from && t <= inc.End);
+        var tenantHits = r.Findings.Where(f => TenantFailKeys.Contains(f.Key) && f.Severity != Severity.Noise).SelectMany(f => f.Times).Count(t => t >= from && t <= inc.End);
         if (tenantHits > 0 && !causes.Any(c => c.Category is "Wi-Fi" or "Rede" or "DNS" or "Energia" or "Serviço"))
         {
             var ssl = r.Findings.Any(f => f.Key == "ssl" && f.Times.Any(t => t >= from && t <= inc.End));

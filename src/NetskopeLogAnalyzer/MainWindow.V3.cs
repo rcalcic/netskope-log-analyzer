@@ -180,7 +180,7 @@ public partial class MainWindow
             wrap.Children.Add(b);
         }
         if (r.Score is double sc)
-            Tile($"{sc:0}", "Experience Score (" + ExperienceScore.Band(sc) + ")", sc <= 30 ? Red : sc <= 70 ? AmberText : Green, "0–100, como o DEM. Clique para ver os componentes.", TabExperience);
+            Tile($"{sc:0}", "Experience Score (" + ExperienceScore.Band(sc) + (r.ScoreMissing != null ? ", parcial" : "") + ")", sc <= 30 ? Red : sc <= 70 ? AmberText : Green, "0–100, como o DEM. Clique para ver os componentes.", TabExperience);
         var crit = r.Incidents.Count(i => i.Severity == Severity.Critical);
         Tile(r.Incidents.Count.ToString(CultureInfo.InvariantCulture), r.Incidents.Count == 1 ? "incidente" : $"incidentes ({crit} crítico(s))", r.Incidents.Count == 0 ? Green : crit > 0 ? Red : AmberText, "Clique para ver horário e causa raiz.", TabIncidents);
         foreach (var (svc, av) in r.Availability)
@@ -286,6 +286,8 @@ public partial class MainWindow
         p.Children.Add(T("Experience Score", 24, FontWeights.Bold));
         p.Children.Add(Sub("Nota de 0 a 100 a cada 5 minutos, no modelo do Netskope DEM: Dispositivo (CPU, memória, disco, Wi-Fi), Rede (latência, perda, jitter, DNS e latência até o POP), Netskope (túnel conectado e falhas com o tenant) e Aplicação (testes HTTP). Componentes sem dados ficam de fora; o pior componente limita a nota. Faixas: 0–30 ruim, 31–70 regular, 71–100 bom."));
         if (r.Scores.Count == 0) { p.Children.Add(Notice("Não há dados suficientes para calcular o score.", AmberText, AmberBg)); return; }
+        if (r.ScoreMissing != null)
+            p.Children.Add(Notice($"Score parcial: sem dados de {r.ScoreMissing}. A nota usa só os componentes medidos" + (r.HasTelemetry ? "." : " — rode o coletor na máquina para incluir CPU, memória, Wi-Fi e testes de aplicação."), AmberText, AmberBg));
         var sc = r.Score ?? 0;
         var color = sc <= 30 ? Red : sc <= 70 ? AmberText : Green;
 
@@ -469,6 +471,7 @@ public partial class MainWindow
             if (snap.DefaultGateway != null || r.Facts.Dns != null) p.Children.Add(Sub($"Gateway padrão: {snap.DefaultGateway ?? "—"} · DNS: {r.Facts.Dns ?? "—"}"));
             if (snap.ConnectionStates.Count > 0) p.Children.Add(Sub("Conexões TCP: " + string.Join(" · ", snap.ConnectionStates.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value}"))));
         }
+        NetworkTacSections(p);
         p.Children.Add(H2("Baseline"));
         p.Children.Add(BaselineTable(MetricCatalog.Network, MetricCatalog.Netskope));
         p.Children.Add(H2("Anomalias"));

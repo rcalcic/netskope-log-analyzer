@@ -176,7 +176,7 @@ public sealed class Analyzer
             if (Regex.IsMatch(baseName, @"\.(json|conf|bak)$", RegexOptions.IgnoreCase)) ParseJson(baseName, text);
             if (baseName.Equals("install.log", StringComparison.OrdinalIgnoreCase)) ParseInstall(text);
             if (Regex.IsMatch(baseName, "network-state|ipconfig|netstat", RegexOptions.IgnoreCase)) ParseNetworkState(text, baseName);
-            if (Regex.IsMatch(baseName, @"network-state|ipconfig|netstat|nmcli|resolv|route|ifconfig|ip[-_]?addr|scutil|ps[-_]?aux|process", RegexOptions.IgnoreCase) && text.Length < 20_000_000) _texts[baseName] = text;
+            if (Regex.IsMatch(baseName, @"network-state|ipconfig|netstat|nmcli|resolv|route|ifconfig|ip[-_]?addr|scutil|ps[-_]?aux|process|appinfo", RegexOptions.IgnoreCase) && text.Length < 20_000_000) _texts[baseName] = text;
             if (Regex.IsMatch(baseName, @"process|tasklist|ps[-_]?aux", RegexOptions.IgnoreCase)) ScanProcesses(text, baseName);
             if (baseName.StartsWith("appinfo", StringComparison.OrdinalIgnoreCase))
             {
@@ -190,7 +190,10 @@ public sealed class Analyzer
         DeriveFacts();
         BuildFindings();
         _r.Events.Sort((a, b) => a.Time.CompareTo(b.Time));
-        _r.Entries.Sort((a, b) => a.Time.CompareTo(b.Time));
+        // ordenação estável: linhas com o mesmo horário mantêm a ordem do arquivo
+        var ordered = _r.Entries.OrderBy(e => e.Time).ToList();
+        _r.Entries.Clear();
+        _r.Entries.AddRange(ordered);
         _r.Unclassified.AddRange(_unc.Values.OrderByDescending(u => u.Count));
         _r.DetectedOs = DetectOs();
         _tac = new TacInsights(_r, _texts, _json);
