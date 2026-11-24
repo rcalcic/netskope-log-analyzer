@@ -1,7 +1,9 @@
-**Netskope Log Analyzer 1.0.1**
+**Netskope Log Analyzer 2.0.0 — app nativo para Windows**
 
-- **Novo jeito de instalar, sem executável:** abra https://rcalcic.github.io/netskope-log-analyzer/ no Microsoft Edge e clique em **Instalar app**. Resolve o bloqueio do Windows (SmartScreen / Controle Inteligente de Aplicativos) ao `Setup.exe`, que não tem assinatura digital.
-- O app instalado funciona offline e aceita abrir `.zip` de logs pelo *Abrir com* do Windows.
-- A análise continua 100% local: nenhum log sai do computador.
+- Reescrito em **C#/.NET 8 (WPF)**: não depende de navegador, Edge ou WebView2. Executável único e autocontido (não precisa do .NET instalado).
+- Mesmo diagnóstico da versão anterior: ~40 padrões conhecidos, resolução passo a passo com comandos e botão *Copiar*, documentação oficial, linha do tempo, gráfico de erros, explorador de logs.
+- Novo: **Salvar relatório** em Markdown, *Abrir com* para `.zip`/`.log` no Explorador, abas com contagem.
+- Instalador por máquina em `C:\Program Files`, com instalação silenciosa para Intune/SCCM (`/VERYSILENT /ALLUSERS`).
+- A versão web (página/PWA) foi descontinuada.
 
-Os pacotes abaixo continuam disponíveis como alternativa. O `Setup.exe` não é assinado; se o Windows bloquear sem opção de *Executar assim mesmo*, use o método pelo Edge.
+**Os executáveis não têm assinatura digital.** Para liberar no ambiente da empresa (SmartScreen, AppLocker, WDAC), use os hashes abaixo e o guia [docs/LIBERACAO-TI.md](https://github.com/rcalcic/netskope-log-analyzer/blob/main/docs/LIBERACAO-TI.md).

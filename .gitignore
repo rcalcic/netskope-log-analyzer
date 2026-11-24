@@ -1,8 +1,13 @@
+# build
+bin/
+obj/
+publish/
 dist/
-build/
+*.user
+.vs/
+TestResults/
 # nunca versionar logs reais
 NetskopeLogs*.zip
 *.log
 *.pcap
 authtoken.pem
-site/

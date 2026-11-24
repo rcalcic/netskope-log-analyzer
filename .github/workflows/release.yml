@@ -1,10 +1,12 @@
 name: Build e Release (Windows)
 
+# Toda mudança na main compila e testa. Quando o arquivo VERSION muda (ou ao
+# disparar manualmente / criar tag v*), também publica a release com os pacotes.
 on:
   push:
     branches: [main]
-    paths: ['VERSION']
     tags: ['v*']
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -15,6 +17,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
 
       - name: Instalar Inno Setup 6 (se ausente)
         shell: pwsh
@@ -23,7 +31,7 @@ jobs:
             choco install innosetup -y --no-progress
           }
 
-      - name: Gerar pacotes
+      - name: Testar e gerar pacotes
         shell: pwsh
         run: ./build.ps1 -RequireSetup
 
@@ -33,18 +41,34 @@ jobs:
           name: NetskopeLogAnalyzer
           path: dist/*
 
+      - name: Decidir se publica release
+        id: rel
+        shell: pwsh
+        run: |
+          $publish = $false
+          if ($env:GITHUB_REF -like 'refs/tags/*' -or $env:GITHUB_EVENT_NAME -eq 'workflow_dispatch') { $publish = $true }
+          elseif ($env:GITHUB_EVENT_NAME -eq 'push') {
+            $changed = git diff --name-only HEAD~1 HEAD 2>$null
+            if ($changed -contains 'VERSION') { $publish = $true }
+          }
+          "publish=$($publish.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+
       - name: Publicar release
+        if: steps.rel.outputs.publish == 'true'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = if ($env:GITHUB_REF -like 'refs/tags/*') { $env:GITHUB_REF_NAME } else { 'v' + (Get-Content VERSION -Raw).Trim() }
-          $files = (Get-ChildItem dist).FullName
+          $fence = '```'
+          $notes = (Get-Content RELEASE_NOTES.md -Raw) + "`n`n### SHA-256 (para liberação pelo TI)`n$fence`n" + (Get-Content dist/SHA256SUMS.txt -Raw) + "$fence`n"
+          Set-Content -Path notes.md -Value $notes -Encoding utf8
+          $files = (Get-ChildItem dist -File).FullName
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
-            Write-Host "Release $tag ja existe: atualizando os arquivos"
             gh release upload $tag @files --clobber
+            gh release edit $tag --notes-file notes.md
           } else {
-            gh release create $tag @files --target $env:GITHUB_SHA --title "Netskope Log Analyzer $tag" --notes-file RELEASE_NOTES.md
+            gh release create $tag @files --target $env:GITHUB_SHA --title "Netskope Log Analyzer $tag" --notes-file notes.md
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

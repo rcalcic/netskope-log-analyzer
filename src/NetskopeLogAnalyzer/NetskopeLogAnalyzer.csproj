@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>NetskopeLogAnalyzer</RootNamespace>
+    <AssemblyName>NetskopeLogAnalyzer</AssemblyName>
+    <ApplicationIcon>..\..\assets\icon.ico</ApplicationIcon>
+    <Product>Netskope Log Analyzer</Product>
+    <AssemblyTitle>Netskope Log Analyzer</AssemblyTitle>
+    <Description>Analisa pacotes de logs do Netskope Client e mostra falhas e como resolvê-las.</Description>
+    <Company>Suporte de TI</Company>
+    <Copyright>Suporte de TI</Copyright>
+    <Version>0.0.0</Version>
+    <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NetskopeLogAnalyzer.Core\NetskopeLogAnalyzer.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\assets\icon-256.png" Link="icon.png" />
+  </ItemGroup>
+
+</Project>
