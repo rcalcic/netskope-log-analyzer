@@ -15,7 +15,7 @@
     <Description>Analisa pacotes de logs do Netskope Client e mostra falhas e como resolvê-las.</Description>
     <Company>Suporte de TI</Company>
     <Copyright>Suporte de TI</Copyright>
-    <Version>0.0.0</Version>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)..\..\VERSION').Trim())</Version>
     <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
     <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
