@@ -28,13 +28,15 @@ public static class ExperienceScore
         IEnumerable<MetricSeries> Prefix(string p) => r.Series.Values.Where(s => s.Key.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
         var failTimes = r.Findings.Where(f => NetskopeFailureKeys.Contains(f.Key) && f.Severity != Severity.Noise).SelectMany(f => f.Times).OrderBy(t => t).ToList();
-        var states = r.States.Where(s => s.Service is "Internet" or "Private Access").ToList();
+        var states = r.States.Where(s => s.Service is "Internet" or "Private Access" && s.State is not ("Reautenticando" or "Parado pelo cliente") && !s.State.StartsWith("Sem atividade", StringComparison.Ordinal)).ToList();
+        var inactive = r.States.Where(s => s.State.StartsWith("Sem atividade", StringComparison.Ordinal)).Select(s => (s.Start, s.End)).ToList();
         var httpFail = r.Events.Where(e => e.Label == "Falha no teste HTTP").Select(e => e.Time).ToList();
         var tcpFail = r.Events.Where(e => e.Label is "Falha de conexão TCP" or "Falha de DNS").Select(e => e.Time).ToList();
 
         for (var w = start; w < end; w += Window)
         {
             var we = w + Window;
+            if (inactive.Any(g => w >= g.Start && we <= g.End)) continue; // máquina sem atividade
             var notes = new List<string>();
 
             // ---- dispositivo

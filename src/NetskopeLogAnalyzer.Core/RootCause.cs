@@ -65,7 +65,7 @@ public static class RootCause
 
         // 5) anomalias críticas de dispositivo/rede sem outro incidente (ex.: CPU a 100%)
         foreach (var an in r.Anomalies.Where(x => x.Critical && x.Group is MetricCatalog.Device or MetricCatalog.Wifi or MetricCatalog.Network
-                     && !x.SeriesKey.StartsWith("npa.dns", StringComparison.Ordinal) && !x.SeriesKey.StartsWith("net.changes", StringComparison.Ordinal)))
+                     && !x.SeriesKey.StartsWith("npa.dns", StringComparison.Ordinal) && !x.SeriesKey.StartsWith("net.changes", StringComparison.Ordinal) && !x.SeriesKey.StartsWith("perf.", StringComparison.Ordinal)))
             incidents.Add(new Incident
             {
                 Title = $"{an.Label} em nível crítico", Start = an.Start, End = an.End > an.Start ? an.End : an.Start.AddSeconds(30), Kind = "métrica", Severity = Severity.Warning,

@@ -748,6 +748,39 @@ public sealed class TacInsights
         NpaSessions();
         PopQuality();
         Captures();
+        SchedDelays();
+    }
+
+    private void SchedDelays()
+    {
+        if (!_r.Series.TryGetValue("perf.sched", out var s)) return;
+        var late = s.Points.Where(p => p.Value >= 120).Select(p => p.Time).ToList();
+        if (late.Count < 3) return;
+        var clusters = RootCause.Clusters(late, TimeSpan.FromMinutes(20)).ToList();
+        var f = new Finding
+        {
+            Key = "perfsched", Severity = late.Count >= 12 ? Severity.Warning : Severity.Info, Category = "Dispositivo",
+            Title = $"Máquina demorou a executar tarefas do cliente em {late.Count} momentos (atrasos de 2 min ou mais)",
+            Meaning = "As estatísticas que o túnel grava a cada 5 minutos chegaram atrasadas. Isso acontece quando a máquina entra em suspensão leve (tampa fechada, economia de energia agressiva) ou fica sem CPU/disco por um tempo. " +
+                      "Períodos: " + string.Join("; ", clusters.Take(6).Select(c => $"{c.Start:dd/MM HH:mm}–{c.End:HH:mm} ({c.Count})")) + ". Se coincidir com reclamações de lentidão ou queda, rode o coletor para ver CPU, memória e energia no mesmo horário.",
+            Action = "Verifique energia/suspensão e carga da máquina nesses horários.",
+            Count = late.Count, First = late[0], Last = late[^1],
+        };
+        f.Times.AddRange(late);
+        if (Os == ClientOs.Windows)
+        {
+            f.Steps.Add(new("Veja suspensões e o que impediu/causou cada uma:", "powercfg /sleepstudy /output %TEMP%\\sleepstudy.html\nstart %TEMP%\\sleepstudy.html"));
+            f.Steps.Add(new("Desative a economia de energia do adaptador de rede (Gerenciador de Dispositivos > adaptador > Gerenciamento de Energia).", null));
+        }
+        else if (Os == ClientOs.Mac)
+            f.Steps.Add(new("Veja suspensões/despertares no horário:", "pmset -g log | grep -E ' Sleep | Wake | DarkWake' | tail -40"));
+        else
+        {
+            f.Steps.Add(new("Veja suspensões e retomadas no horário:", "journalctl -k --since \"-7d\" | grep -Ei 'PM: suspend|PM: resume|s2idle' | tail -40"));
+            f.Steps.Add(new("Confira o modo de suspensão e a carga média:", "cat /sys/power/mem_sleep; uptime"));
+        }
+        f.SearchQuery = "laptop suspend s2idle network drop";
+        _r.Findings.Add(f);
     }
 
     private void NpaSessions()
@@ -779,7 +812,7 @@ public sealed class TacInsights
                 var ip = x.Groups[1].Value;
                 if (cur != null && cur.End is null) continue; // conexão auxiliar dentro da mesma sessão
                 var prev = _r.NpaSessions.LastOrDefault();
-                if (prev != null && prev.End != null && prev.ReconnectedAt is null) prev.ReconnectedAt = e.Time;
+                if (prev != null && prev.End != null && prev.ReconnectedAt is null && prev.StoppedAt is null && !prev.Stopped) prev.ReconnectedAt = e.Time;
                 cur = new NpaSession { Start = e.Time, GatewayIp = ip, Pop = pendingPop ?? _gwPop.GetValueOrDefault(ip), SelectRttMs = pendingRtt };
                 _r.NpaSessions.Add(cur);
                 pendingIp = null;
@@ -1211,7 +1244,7 @@ public sealed class TacInsights
         var udp = r.Apps.Sum(a => a.BlockedUdp);
         if (udp > 0) P("Netskope", "Conexões UDP/QUIC bloqueadas", udp.ToString("N0", CultureInfo.GetCultureInfo("pt-BR")), "—", "—", "Comportamento padrão: força o navegador a usar TCP/TLS (inspecionável).");
         foreach (var c in r.Captures.Where(c => c.Packets > 0))
-            P(MetricCatalog.Network, $"Captura {c.File}", $"{c.Packets:N0} pacotes · retransmissões {N(c.RetransPct)}% · RST {c.Resets:N0} · SYN sem resposta {c.HandshakeFailures}", "< 3% retransmissões",
+            P(MetricCatalog.Network, $"Captura {c.File}" + (c.First is DateTime cf ? $" ({cf:dd/MM HH:mm})" : ""), $"{c.Packets:N0} pacotes · retransmissões {N(c.RetransPct)}% · RST {c.Resets:N0} · SYN sem resposta {c.HandshakeFailures}", "< 3% retransmissões",
                 c.TcpDataSegments < 200 ? "—" : St(c.RetransPct, 3, 8), "Resumo da captura de pacotes do pacote de logs.");
     }
 
