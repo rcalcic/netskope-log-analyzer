@@ -54,6 +54,9 @@ public sealed class Finding
     // usados só pela detecção de ambiente, para montar os comandos
     public List<string> Interfaces { get; } = new();
     public List<string> MissingPackages { get; } = new();
+
+    /// <summary>Horário de cada ocorrência (usado na correlação de causa raiz).</summary>
+    public List<DateTime> Times { get; } = new();
 }
 
 public sealed class UnclassifiedGroup
@@ -109,6 +112,32 @@ public sealed class AnalysisResult
     public DateTime? Start { get; set; }
     public DateTime? End { get; set; }
     public ClientOs? DetectedOs { get; set; }
+
+    // ---- v3: telemetria, baseline, experiência e causa raiz
+    public Dictionary<string, MetricSeries> Series { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<Snapshot> Snapshots { get; } = new();
+    public List<PathTrace> Paths { get; } = new();
+    public List<AppUsage> Apps { get; } = new();
+    public List<PopStat> Pops { get; } = new();
+    public List<StateInterval> States { get; } = new();
+    public Dictionary<string, double> Availability { get; } = new();
+    public List<KeyValuePair<DateTime, string>> EgressHistory { get; } = new();
+    public List<ScoreWindow> Scores { get; } = new();
+    public double? Score { get; set; }
+    public List<Incident> Incidents { get; } = new();
+    public List<Anomaly> Anomalies { get; } = new();
+    /// <summary>Informações estáticas do dispositivo (CPU, RAM, SO…), vindas do coletor e de snapshots.</summary>
+    public Dictionary<string, string> Device { get; } = new();
+    public bool HasTelemetry { get; set; }
+    public List<string> TelemetrySources { get; } = new();
+    /// <summary>Avisos sobre dados ausentes (o que não pôde ser medido e por quê).</summary>
+    public List<string> DataGaps { get; } = new();
+
+    public MetricSeries GetOrAddSeries(string key, Func<MetricSeries> create)
+    {
+        if (!Series.TryGetValue(key, out var s)) { s = create(); Series[key] = s; }
+        return s;
+    }
 
     public int Count(Severity s) => Findings.Count(f => f.Severity == s);
     public int RawErrors => Files.Sum(f => f.Errors);

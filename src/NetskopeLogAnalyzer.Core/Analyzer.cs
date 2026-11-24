@@ -25,6 +25,14 @@ public sealed class Analyzer
     private static readonly Regex DestIpRe = new(@"dest IP: (\S+)", Opt);
     private static readonly Regex TenantRe = new(@"(?:addon|achecker|gateway|download|nsauth|aproxy)-([a-z0-9]+(?:\.(?:eu|de|au))?)\.goskope\.com", Opt | RegexOptions.IgnoreCase);
 
+    // métricas extraídas dos logs do Netskope Client
+    private static readonly Regex PostRttRe = new(@"gslb \[(NPA|NSClient)\]:? post client rtt pop:(\S+) ip:([\d.]+) rtt:(\d+)", Opt);
+    private static readonly Regex CalcRttRe = new(@"gslb \[(NPA|NSClient)\]:? calculate\(\) rtt:([\d.]+) duration:(\d+)", Opt);
+    private static readonly Regex PopDefRe = new(@"gslb \[(NPA|NSClient)\] Pop:([^;]+);[^;]*;[^;]*;([\d.]+);", Opt);
+    private static readonly Regex FlowRe = new(@"TLS Tunneling flow from addr: [^,]+, process: ?([^,]*?) to host: ([^,]+), addr", Opt);
+    private static readonly Regex BypassRe = new(@"bypassing flow to exception host: ([^,]+), process: ([^,]+)", Opt);
+    private static readonly Regex UdpBlockRe = new(@"Blocking UDP connection from process: ([^,]+), dest IP:([\d.:a-fA-F]+?):(\d+),", Opt);
+
     private static readonly Regex NormHex = new(@"0x[0-9a-f]+", Opt | RegexOptions.IgnoreCase);
     private static readonly Regex NormIp = new(@"\b\d{1,3}(\.\d{1,3}){3}(:\d+)?\b", Opt);
     private static readonly Regex NormUuid = new(@"[0-9a-f]{8}-[0-9a-f-]{27,}", Opt | RegexOptions.IgnoreCase);
@@ -59,6 +67,7 @@ public sealed class Analyzer
         public readonly HashSet<string> Files = new(StringComparer.OrdinalIgnoreCase);
         public readonly List<string> Samples = new();
         public readonly Dictionary<string, int> Details = new();
+        public readonly List<DateTime> Times = new();
     }
 
     private AnalysisResult _r = new();
@@ -67,6 +76,12 @@ public sealed class Analyzer
     private readonly Dictionary<string, JsonElement> _json = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Finding> _extra = new();
     private string? _lastLocation;
+    private readonly Dictionary<string, string> _popNames = new();
+    private readonly List<(DateTime Time, string Svc, string Pop, string? Ip, double Rtt)> _rtt = new();
+    private readonly List<DateTime> _flowTunnel = new(), _flowBypass = new(), _flowUdp = new(), _errTimes = new();
+    private readonly Dictionary<string, AppUsage> _apps = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<(DateTime Time, int Svc, string Ev)> _svcEvents = new();
+    private DateTime? _collectedAt;
 
     // ------------------------------------------------------------------ entrada
 
@@ -143,6 +158,12 @@ public sealed class Analyzer
             var fi = _r.Files.Count;
             _r.Files.Add(new LogFileInfo { Name = it.Name, Size = it.Data.Length });
 
+            if (TelemetryParser.LooksLikeTelemetry(baseName, text))
+            {
+                TelemetryParser.Parse(text, baseName, _r);
+                continue;
+            }
+
             if (Regex.IsMatch(baseName, @"\.(json|conf|bak)$", RegexOptions.IgnoreCase)) ParseJson(baseName, text);
             if (baseName.Equals("install.log", StringComparison.OrdinalIgnoreCase)) ParseInstall(text);
             if (Regex.IsMatch(baseName, "network-state|ipconfig|netstat", RegexOptions.IgnoreCase)) ParseNetworkState(text, baseName);
@@ -153,6 +174,7 @@ public sealed class Analyzer
                 if (apps.Count > 0) _r.Facts.InstalledVpnApps = string.Join(", ", apps);
             }
             ParseLog(fi, text);
+            if (_r.Files[fi].Lines < 20 && SnapshotParsers.Parse(baseName, text, null) is Snapshot snap) _r.Snapshots.Add(snap);
         }
 
         DeriveFacts();
@@ -167,6 +189,7 @@ public sealed class Analyzer
             f.References.AddRange(KnowledgeBase.ReferencesFor(f.Key));
             f.SearchQuery = KnowledgeBase.QueryFor(f.Key, f.Title);
         }
+        FinalizeMetrics();
         return _r;
     }
 
@@ -237,7 +260,7 @@ public sealed class Analyzer
             if (file.Last is null || time > file.Last) file.Last = time;
             if (_r.Start is null || time < _r.Start) _r.Start = time;
             if (_r.End is null || time > _r.End) _r.End = time;
-            if (level is LogLevel.Error or LogLevel.Critical) file.Errors++;
+            if (level is LogLevel.Error or LogLevel.Critical) { file.Errors++; _errTimes.Add(time); }
             else if (level == LogLevel.Warn) file.Warnings++;
 
             var entry = new LogEntry(fi, time, level, line, msg, src);
@@ -270,6 +293,7 @@ public sealed class Analyzer
                 var who = actor == "User" ? "usuário" : actor == "System" ? "sistema" : actor;
                 _r.Events.Add(new(e.Time, EventLabel(ev), EventKindOf(ev), ServiceName(svc) + " · por " + who, file));
                 F.Services[svc] = new ServiceState(ev, e.Time);
+                _svcEvents.Add((e.Time, svc, ev));
             }
         }
         else if (m.Contains("Client location is"))
@@ -281,13 +305,24 @@ public sealed class Analyzer
                 _r.Events.Add(new(e.Time, "Local: " + _lastLocation, EventKind.Info, "", file));
             }
         }
-        else if (m.Contains("Log collection complete")) _r.Events.Add(new(e.Time, "Coleta de logs", EventKind.Info, "", file));
+        else if (m.Contains("Log collection complete")) { _r.Events.Add(new(e.Time, "Coleta de logs", EventKind.Info, "", file)); _collectedAt = e.Time; }
         else if (m.Contains("NPA Tunnel Status:"))
         {
             var x = NpaStatusRe.Match(m); if (x.Success) F.NpaLast = x.Groups[2].Value;
         }
 
-        if (m.Contains("egress_ip")) { var x = EgressRe.Match(m); if (x.Success) F.Egress = x.Groups[1].Value; }
+        if (m.Contains("egress_ip"))
+        {
+            var x = EgressRe.Match(m);
+            if (x.Success)
+            {
+                var ip = x.Groups[1].Value;
+                if (F.Egress != null && F.Egress != ip) _r.Events.Add(new(e.Time, "IP de saída mudou", EventKind.Alert, $"{F.Egress} → {ip}", file));
+                if (F.Egress != ip) _r.EgressHistory.Add(new(e.Time, ip));
+                F.Egress = ip;
+            }
+        }
+        CollectMetrics(e, m);
         if (m.Contains("fetched ordered POPs"))
         {
             var x = PopNameRe.Match(m);
@@ -338,6 +373,7 @@ public sealed class Analyzer
         if (e.Time < h.First) h.First = e.Time;
         if (e.Time > h.Last) h.Last = e.Time;
         h.Files.Add(file.BaseName);
+        if (h.Times.Count < 20000) h.Times.Add(e.Time);
         if (h.Samples.Count < 6) h.Samples.Add(file.BaseName + ": " + e.Line);
         if (r.Id == "restapi")
         {
@@ -562,9 +598,179 @@ public sealed class Analyzer
             f.Files.AddRange(h.Files);
             f.Samples.AddRange(h.Samples);
             f.Details.AddRange(h.Details.OrderByDescending(kv => kv.Value));
+            f.Times.AddRange(h.Times);
             _r.Findings.Add(f);
         }
         _r.Findings.AddRange(_extra);
         _r.Findings.Sort((a, b) => a.Severity != b.Severity ? a.Severity.CompareTo(b.Severity) : b.Count.CompareTo(a.Count));
+    }
+
+    // ------------------------------------------------------------------ métricas dos logs (v3)
+
+    private static readonly CultureInfo CI = CultureInfo.InvariantCulture;
+
+    private static string SvcName(string gslbSvc) => gslbSvc == "NPA" ? "Private Access" : "Internet";
+
+    private void AddRtt(DateTime t, string svc, string pop, string? ip, double rtt)
+    {
+        var name = SvcName(svc);
+        for (var i = _rtt.Count - 1; i >= 0 && (t - _rtt[i].Time).TotalSeconds <= 3; i--)
+            if (_rtt[i].Svc == name && _rtt[i].Ip == ip) return; // mesma medição registrada duas vezes
+        _rtt.Add((t, name, pop, ip, rtt));
+    }
+
+    private AppUsage App(string process, string host, DateTime t)
+    {
+        process = string.IsNullOrWhiteSpace(process) ? "(desconhecido)" : process.Trim();
+        host = host.Trim();
+        var key = process + "|" + host;
+        if (!_apps.TryGetValue(key, out var a)) { a = new AppUsage { Process = process, Host = host }; _apps[key] = a; }
+        if (t < a.First) a.First = t;
+        if (t > a.Last) a.Last = t;
+        return a;
+    }
+
+    private void CollectMetrics(LogEntry e, string m)
+    {
+        if (m.Contains("gslb [", StringComparison.Ordinal))
+        {
+            var pd = PopDefRe.Match(m);
+            if (pd.Success) { _popNames[pd.Groups[3].Value] = pd.Groups[2].Value; return; }
+            var pr = PostRttRe.Match(m);
+            if (pr.Success)
+            {
+                _popNames[pr.Groups[3].Value] = pr.Groups[2].Value;
+                AddRtt(e.Time, pr.Groups[1].Value, pr.Groups[2].Value, pr.Groups[3].Value, double.Parse(pr.Groups[4].Value, CI));
+                return;
+            }
+            var cr = CalcRttRe.Match(m);
+            if (cr.Success)
+            {
+                var ip = cr.Groups[2].Value;
+                AddRtt(e.Time, cr.Groups[1].Value, _popNames.GetValueOrDefault(ip) ?? ip, ip, double.Parse(cr.Groups[3].Value, CI));
+            }
+            return;
+        }
+        if (m.Contains("TLS Tunneling flow", StringComparison.Ordinal))
+        {
+            var x = FlowRe.Match(m);
+            if (x.Success) { _flowTunnel.Add(e.Time); App(x.Groups[1].Value, x.Groups[2].Value, e.Time).Tunneled++; }
+            return;
+        }
+        if (m.Contains("bypassing flow", StringComparison.Ordinal))
+        {
+            var x = BypassRe.Match(m);
+            if (x.Success) { _flowBypass.Add(e.Time); App(x.Groups[2].Value, x.Groups[1].Value, e.Time).Bypassed++; }
+            return;
+        }
+        if (m.Contains("Blocking UDP", StringComparison.Ordinal))
+        {
+            var x = UdpBlockRe.Match(m);
+            if (x.Success) { _flowUdp.Add(e.Time); App(x.Groups[1].Value, x.Groups[2].Value + ":" + x.Groups[3].Value + " (UDP/QUIC)", e.Time).BlockedUdp++; }
+        }
+    }
+
+    private void FinalizeMetrics()
+    {
+        var r = _r;
+        var collected = _collectedAt ?? r.End;
+        foreach (var sn in r.Snapshots) sn.Time ??= collected;
+        foreach (var sn in r.Snapshots)
+        {
+            foreach (var kv in sn.System) r.Device.TryAdd(kv.Key, kv.Value);
+            if (sn.MemTotalMb is double mt) r.Device.TryAdd("Memória total (MB)", mt.ToString("0", CI));
+        }
+
+        // latência por POP (medida pelo próprio cliente na seleção de gateway)
+        foreach (var g in _rtt.GroupBy(x => (x.Svc, x.Pop)))
+        {
+            var key = $"pop.rtt:{g.Key.Svc} {g.Key.Pop}";
+            var list = g.OrderBy(x => x.Time).ToList();
+            foreach (var x in list) TelemetryParser.Add(r, key, x.Time, x.Rtt, "Logs Netskope");
+            r.Pops.Add(new PopStat(g.Key.Svc, g.Key.Pop, list[^1].Ip, list.Count, list.Min(x => x.Rtt), Math.Round(list.Average(x => x.Rtt), 1), list.Max(x => x.Rtt), list[^1].Rtt, list[^1].Time));
+        }
+        r.Pops.Sort((a, b) => a.Service != b.Service ? string.CompareOrdinal(a.Service, b.Service) : a.Avg.CompareTo(b.Avg));
+        foreach (var g in _rtt.GroupBy(x => x.Svc))
+        {
+            var ordered = g.OrderBy(x => x.Time).ToList();
+            var i = 0;
+            while (i < ordered.Count)
+            {
+                var t0 = ordered[i].Time; var best = double.MaxValue; var j = i;
+                while (j < ordered.Count && (ordered[j].Time - t0).TotalSeconds <= 10) { best = Math.Min(best, ordered[j].Rtt); j++; }
+                TelemetryParser.Add(r, "pop.best:" + g.Key, t0, best, "Logs Netskope");
+                i = j;
+            }
+        }
+
+        // contagens por minuto (fluxos e erros) no período coberto pelos logs do Netskope
+        if (r.Entries.Count > 0)
+        {
+            var logStart = r.Entries[0].Time; var logEnd = r.Entries[^1].Time;
+            var bucket = (logEnd - logStart).TotalDays > 3 ? TimeSpan.FromMinutes(10) : TimeSpan.FromMinutes(1);
+            void PerMinute(string key, List<DateTime> times)
+            {
+                if (times.Count == 0) return;
+                var t0 = new DateTime(logStart.Ticks - logStart.Ticks % bucket.Ticks);
+                var n = (int)((logEnd - t0).Ticks / bucket.Ticks) + 1;
+                var counts = new int[n];
+                foreach (var t in times) { var b = (int)((t - t0).Ticks / bucket.Ticks); if (b >= 0 && b < n) counts[b]++; }
+                for (var k = 0; k < n; k++) TelemetryParser.Add(r, key, t0 + bucket * k, counts[k] / bucket.TotalMinutes, "Logs Netskope");
+            }
+            PerMinute("flows.tunnel", _flowTunnel);
+            PerMinute("flows.bypass", _flowBypass);
+            PerMinute("flows.udpblock", _flowUdp);
+            PerMinute("log.errors", _errTimes);
+
+            // estados do túnel por serviço
+            var stops = r.Events.Where(x => x.Label == "Serviço parado").Select(x => x.Time).ToList();
+            foreach (var svc in new[] { 1, 2 })
+            {
+                var changes = new List<(DateTime T, string State)>();
+                foreach (var x in _svcEvents.Where(x => x.Svc == svc))
+                {
+                    string? st = x.Ev switch
+                    {
+                        "Tunnel Up" => "Conectado",
+                        "Tunnel Down" => "Desconectado",
+                        "User Disabled" => "Desabilitado pelo usuário",
+                        "Admin Disabled" => "Desabilitado pelo admin",
+                        _ => null,
+                    };
+                    if (st != null) changes.Add((x.Time, st));
+                }
+                if (changes.Count == 0) continue;
+                var first = changes.Min(c => c.T);
+                changes.AddRange(stops.Where(t => t > first).Select(t => (t, "Serviço parado")));
+                changes.Sort((a, b) => a.T.CompareTo(b.T));
+                var name = ServiceName(svc);
+                double total = 0, up = 0;
+                for (var k = 0; k < changes.Count; k++)
+                {
+                    if (k > 0 && changes[k].State == changes[k - 1].State) continue;
+                    var next = k + 1;
+                    while (next < changes.Count && changes[next].State == changes[k].State) next++;
+                    var endT = next < changes.Count ? changes[next].T : logEnd;
+                    if (endT <= changes[k].T) continue;
+                    r.States.Add(new StateInterval(name, changes[k].State, changes[k].T, endT));
+                    total += (endT - changes[k].T).TotalSeconds;
+                    if (changes[k].State == "Conectado") up += (endT - changes[k].T).TotalSeconds;
+                }
+                if (total > 0) r.Availability[name] = Math.Round(100 * up / total, 1);
+            }
+        }
+
+        r.Apps.AddRange(_apps.Values.OrderByDescending(a => a.Total));
+
+        if (!r.HasTelemetry)
+            r.DataGaps.Add("Sem telemetria do coletor: o pacote de logs da Netskope não traz séries contínuas de CPU, memória, disco, Wi-Fi, bateria, perda/jitter nem testes de aplicação. Rode o coletor do Netskope Log Analyzer na máquina e analise de novo junto com o pacote para ter o baseline completo e uma causa raiz mais precisa.");
+        if (_rtt.Count == 0)
+            r.DataGaps.Add("Os logs não trazem medições de latência até os POPs (seleção de gateway/GSLB) neste período.");
+        if (!r.Snapshots.Any(sn => sn.Processes.Count > 0 || sn.Wifi != null))
+            r.DataGaps.Add("O pacote não traz fotos instantâneas de processos ou Wi-Fi (ps aux, tasklist, netsh wlan, nmcli…).");
+
+        Baseline.Compute(r);
+        ExperienceScore.Compute(r);
+        RootCause.Analyze(r);
     }
 }
