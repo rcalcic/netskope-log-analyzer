@@ -5,6 +5,9 @@ on:
   workflow_dispatch:
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   smoke:
     runs-on: windows-latest
@@ -67,3 +70,13 @@ jobs:
         with:
           name: screenshots
           path: smoke/*.png
+
+      - name: Anexar screenshots a uma release em rascunho
+        if: always() && github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete smoke-screenshots -y 2>$null
+          $files = (Get-ChildItem smoke/*.png).FullName
+          if ($files) { gh release create smoke-screenshots @files --draft --title "Screenshots do teste de fumaça" --notes "Gerado automaticamente; não é uma versão." }
