@@ -13,6 +13,8 @@
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
           <Button x:Name="BtnCopyReport" Content="Copiar relatório" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Visibility="Collapsed" Click="CopyReport_Click"/>
           <Button x:Name="BtnSaveReport" Content="Salvar relatório…" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Visibility="Collapsed" Click="SaveReport_Click"/>
+          <Button x:Name="BtnTelemetry" Content="Telemetria" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Telemetry_Click" ToolTip="Coletor de telemetria desta máquina, análise local e pacote de diagnóstico"/>
+          <Button x:Name="BtnSettings" Content="Configurações" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Settings_Click"/>
           <Button x:Name="BtnOpen" Content="Abrir pacote…" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Open_Click"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -21,6 +23,18 @@
           <TextBlock x:Name="TxtVersion" Foreground="#9AA3B2" Margin="10,2,0,0" VerticalAlignment="Center"/>
           <TextBlock x:Name="TxtFileName" Foreground="#9AA3B2" Margin="18,2,0,0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="420"/>
         </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <!-- barra de atualização -->
+    <Border x:Name="UpdateBar" DockPanel.Dock="Top" Background="#E8F0FF" BorderBrush="#0A5CFF" BorderThickness="0,0,0,2" Padding="20,8" Visibility="Collapsed">
+      <DockPanel>
+        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+          <Button x:Name="BtnUpdateNow" Content="Atualizar agora" Style="{StaticResource PillDark}" MinHeight="32" Click="UpdateNow_Click"/>
+          <Button Content="Novidades" Style="{StaticResource Small}" Margin="8,0,0,0" Click="UpdateNotes_Click"/>
+          <Button Content="Ignorar esta versão" Style="{StaticResource Small}" Margin="8,0,0,0" Click="UpdateSkip_Click"/>
+        </StackPanel>
+        <TextBlock x:Name="UpdateText" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#0A3FB0" TextWrapping="Wrap"/>
       </DockPanel>
     </Border>
 
@@ -60,6 +74,17 @@
             <TextBlock Margin="0,16,0,0" Foreground="{StaticResource Mute}" TextWrapping="Wrap">
               🔒 A análise roda inteiramente neste computador. Nenhum log é enviado para lugar nenhum — o pacote contém dados sensíveis (token, serial, e-mails).
             </TextBlock>
+            <Border Margin="0,22,0,0" Padding="16" CornerRadius="14" Background="{StaticResource Soft}">
+              <StackPanel>
+                <TextBlock Text="Telemetria e análise desta máquina" FontWeight="Bold" FontSize="16"/>
+                <TextBlock x:Name="TxtCollectorStatus" Foreground="{StaticResource Mute}" Margin="0,4,0,10" TextWrapping="Wrap"/>
+                <WrapPanel>
+                  <Button Content="Analisar esta máquina agora" Style="{StaticResource PillDark}" Margin="0,0,8,8" Click="AnalyzeThisMachine_Click"
+                          ToolTip="Coleta os logs do Netskope Client desta máquina (nsdiag) e junta com a telemetria do coletor"/>
+                  <Button Content="Coletor de telemetria…" Style="{StaticResource Pill}" Margin="0,0,8,8" Click="Telemetry_Click"/>
+                </WrapPanel>
+              </StackPanel>
+            </Border>
           </StackPanel>
 
           <Grid Grid.Column="2" MinHeight="380">
@@ -81,6 +106,18 @@
         <TabItem x:Name="TabSummary" Header="Resumo">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="SummaryPanel" Margin="8,16,8,24"/>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="TabIncidents" Header="Incidentes">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="IncidentsPanel" Margin="8,16,8,24"/>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="TabExperience" Header="Experiência">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ExperiencePanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
@@ -116,6 +153,24 @@
               <WrapPanel x:Name="FilterPanel"/>
               <StackPanel x:Name="FindingsPanel" Margin="0,8,0,0"/>
             </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="TabDevice" Header="Dispositivo">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="DevicePanel" Margin="8,16,8,24"/>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="TabNetwork" Header="Rede">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="NetworkPanel" Margin="8,16,8,24"/>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem x:Name="TabApps" Header="Aplicações">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="AppsPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 

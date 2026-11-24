@@ -68,6 +68,7 @@ public partial class MainWindow : Window
         _searchTimer.Tick += (_, _) => { _searchTimer.Stop(); RunExplorer(); };
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Toast.Visibility = Visibility.Collapsed; };
         BuildLegends();
+        InitV3();
     }
 
     // ================================================================= entrada de arquivos
@@ -109,13 +110,24 @@ public partial class MainWindow : Window
         try
         {
             var result = await Task.Run(() => new Analyzer().AnalyzePaths(paths, progress));
-            if (result.Entries.Count == 0 && result.Findings.Count == 0)
+            // pacote desta máquina sem telemetria: junta a telemetria local do coletor automaticamente
+            if (!result.HasTelemetry && result.Facts.Host != null && result.Facts.Host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase))
+            {
+                var local = NetskopeLogAnalyzer.Services.TelemetryCollector.LocalTelemetryFiles(14).ToList();
+                if (local.Count > 0)
+                {
+                    TxtProgress.Text = "Incluindo a telemetria local desta máquina…";
+                    var all = paths.Concat(local).ToArray();
+                    result = await Task.Run(() => new Analyzer().AnalyzePaths(all, progress));
+                }
+            }
+            if (result.Entries.Count == 0 && result.Findings.Count == 0 && !result.HasTelemetry && result.Snapshots.Count == 0)
             {
                 TxtProgress.Text = "Nenhum log do Netskope reconhecido nesses arquivos.";
                 return;
             }
             _result = result;
-            TxtFileName.Text = string.Join(", ", paths.Select(p => IOPath.GetFileName(p.TrimEnd('\\', '/'))));
+            TxtFileName.Text = paths.Length <= 2 ? string.Join(", ", paths.Select(p => IOPath.GetFileName(p.TrimEnd('\\', '/')))) : $"{paths.Length} arquivos" + (result.HasTelemetry ? " (com telemetria)" : "");
             TxtProgress.Text = "";
             RenderAll();
         }
@@ -148,6 +160,11 @@ public partial class MainWindow : Window
         RenderUnclassified();
         RenderFiles();
         InitExplorer();
+        RenderIncidents();
+        RenderExperience();
+        RenderDevice();
+        RenderNetwork();
+        RenderApps();
         int prob = _result.Count(Severity.Critical) + _result.Count(Severity.Warning);
         TabFindings.Header = $"Diagnóstico ({prob})";
         TabUnclassified.Header = $"Não classificados ({_result.Unclassified.Count})";
@@ -193,6 +210,7 @@ public partial class MainWindow : Window
                           $"{r.RawErrors:N0} erros e {r.RawWarnings:N0} alertas brutos — a maior parte é ruído conhecido; abaixo estão os que importam.", 15, fg: Mute, margin: new Thickness(0, 8, 0, 0)));
         head.Child = hs;
         SummaryPanel.Children.Add(head);
+        SummaryPanel.Children.Add(SummaryKpis());
 
         var grid = new Grid { Margin = new Thickness(0, 22, 0, 0) };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });

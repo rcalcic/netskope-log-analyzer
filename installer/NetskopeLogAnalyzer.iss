@@ -71,3 +71,5 @@ Root: HKA; Subkey: "Software\Classes\.zip\OpenWithList\{#AppExe}"; ValueType: no
 
 [Run]
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+; atualização automática (instalação silenciosa): reabre o app como o usuário original
+Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: WizardSilent

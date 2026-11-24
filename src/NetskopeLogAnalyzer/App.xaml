@@ -89,7 +89,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="TabItem">
-            <Border x:Name="Bd" Padding="16,10" Margin="0,0,4,0" BorderThickness="0,0,0,3" BorderBrush="Transparent" Background="Transparent" Cursor="Hand">
+            <Border x:Name="Bd" Padding="12,8" Margin="0,0,2,0" BorderThickness="0,0,0,3" BorderBrush="Transparent" Background="Transparent" Cursor="Hand">
               <ContentPresenter ContentSource="Header" TextElement.Foreground="{StaticResource Mute}" x:Name="Cp"/>
             </Border>
             <ControlTemplate.Triggers>

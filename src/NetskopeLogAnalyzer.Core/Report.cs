@@ -31,7 +31,48 @@ public static class Report
         sb.AppendLine("# Análise de logs Netskope" + (F.Host != null ? " — " + F.Host : ""));
         sb.AppendLine($"Período: {Time(r.Start)} → {Time(r.End)} | Versão: {F.Version ?? "—"} | SO: {F.OsName ?? F.Os ?? "—"} | Tenant: {F.TenantHost ?? F.TenantId ?? "—"}");
         sb.AppendLine($"Resultado: {Verdict(r)} ({r.Count(Severity.Critical)} crítico(s), {r.Count(Severity.Warning)} de atenção, {r.Count(Severity.Info)} informativo(s), {r.Count(Severity.Noise)} ruído(s) conhecido(s)).");
+        if (r.Score is double sc) sb.AppendLine($"Experience Score: {sc:0}/100 ({ExperienceScore.Band(sc)}) em {r.Scores.Count} janelas de 5 min.");
+        foreach (var (svc, av) in r.Availability) sb.AppendLine($"Disponibilidade {svc}: {av:0.#}% do tempo conectado.");
+        if (!r.HasTelemetry) sb.AppendLine("Observação: sem telemetria do coletor (CPU, memória, disco e Wi-Fi contínuos não disponíveis).");
         sb.AppendLine();
+
+        if (r.Incidents.Count > 0)
+        {
+            sb.AppendLine("## Incidentes e causa raiz");
+            foreach (var inc in r.Incidents)
+            {
+                sb.AppendLine($"### [{SeverityLabel(inc.Severity)}] {Time(inc.Start)} → {inc.End:HH:mm:ss} ({TelemetryParser.Fmt(inc.Duration)}) — {inc.Title}");
+                if (inc.Impact.Length > 0) sb.AppendLine("Impacto: " + inc.Impact);
+                if (inc.Causes.FirstOrDefault() is Cause c)
+                {
+                    sb.AppendLine($"**Causa raiz provável ({c.Confidence:0}%): {c.Title}** — {c.Evidence}");
+                    sb.AppendLine("O que fazer: " + c.Recommendation);
+                    foreach (var o in inc.Causes.Skip(1)) sb.AppendLine($"- Outra hipótese ({o.Confidence:0}%): {o.Title} — {o.Evidence}");
+                }
+                if (inc.Evidence.Count > 0)
+                {
+                    sb.AppendLine("```");
+                    foreach (var e in inc.Evidence) sb.AppendLine($"{Time(e.Time)}  [{e.Source}]  {e.Text}");
+                    sb.AppendLine("```");
+                }
+                sb.AppendLine();
+            }
+        }
+
+        var keyMetrics = r.Series.Values.Where(x => x.Stats != null && x.Warn != null).OrderBy(x => x.Group).ThenBy(x => x.Label).ToList();
+        if (keyMetrics.Count > 0)
+        {
+            sb.AppendLine("## Baseline");
+            sb.AppendLine("| Métrica | Fonte | Mediana | p95/p5 | Pior | % em atenção |");
+            sb.AppendLine("|---|---|---|---|---|---|");
+            foreach (var m in keyMetrics)
+            {
+                var st = m.Stats!;
+                sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"| {m.Label} | {m.Source} | {st.P50:0.#} {m.Unit} | {st.P95:0.#} {m.Unit} | {st.PeakValue:0.#} {m.Unit} ({Time(st.PeakTime)}) | {st.PctWarn:0}% |"));
+            }
+            sb.AppendLine();
+        }
+
         foreach (var f in r.Findings.Where(f => f.Severity != Severity.Noise))
         {
             sb.AppendLine($"## [{SeverityLabel(f.Severity)}] {f.Title} ({f.Count}x)");
@@ -49,7 +90,7 @@ public static class Report
         }
         if (r.Events.Count > 0)
         {
-            sb.AppendLine("## Linha do tempo");
+            sb.AppendLine("## Linha do tempo (eventos)");
             foreach (var e in r.Events) sb.AppendLine($"- {Time(e.Time)} {e.Label}{(e.Detail.Length > 0 ? " (" + e.Detail + ")" : "")}");
         }
         return sb.ToString();
