@@ -437,10 +437,14 @@ public sealed class TelemetryCollector : IDisposable
     private async Task TraceAsync(CancellationToken ct)
     {
         var tenant = Tenant;
-        var host = string.IsNullOrWhiteSpace(tenant) ? "gateway.npa.goskope.com" : $"gateway-{tenant}.goskope.com";
-        IPAddress target;
-        try { target = (await Dns.GetHostAddressesAsync(host, ct)).First(a => a.AddressFamily == AddressFamily.InterNetwork); }
-        catch (Exception ex) when (ex is SocketException or InvalidOperationException) { return; }
+        var candidates = string.IsNullOrWhiteSpace(tenant) ? new[] { "gateway.npa.goskope.com" } : new[] { $"gateway-{tenant}.goskope.com", "gateway.npa.goskope.com" };
+        IPAddress? target = null; var host = candidates[0];
+        foreach (var c in candidates)
+        {
+            try { target = (await Dns.GetHostAddressesAsync(c, ct)).First(a => a.AddressFamily == AddressFamily.InterNetwork); host = c; break; }
+            catch (Exception ex) when (ex is SocketException or InvalidOperationException) { }
+        }
+        if (target is null) return;
         using var ping = new Ping();
         var hops = new List<Dictionary<string, object?>>();
         var buffer = new byte[32];

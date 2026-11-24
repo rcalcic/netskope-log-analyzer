@@ -1,6 +1,8 @@
 name: Teste de fumaça da interface (Windows)
 
-# Abre o app com um pacote de logs sintético e tira screenshots de cada aba.
+# 1) roda o coletor de telemetria sem janela e valida o JSONL;
+# 2) abre o app só com a telemetria real coletada;
+# 3) abre o app com logs + telemetria sintéticos e captura todas as abas.
 on:
   workflow_dispatch:
   pull_request:
@@ -21,21 +23,24 @@ jobs:
         shell: pwsh
         run: dotnet publish src/NetskopeLogAnalyzer/NetskopeLogAnalyzer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
+      - name: Coletor de telemetria (2 minutos, sem janela)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force smoke | Out-Null
+          $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList '--collect','--minutes','2','--interval','10','--tenant','acme' -PassThru
+          if (-not $p.WaitForExit(240000)) { Stop-Process -Id $p.Id -Force; throw 'O coletor não terminou no tempo esperado' }
+          $f = Get-ChildItem "$env:LOCALAPPDATA\NetskopeLogAnalyzer\telemetry\nla-telemetry-*.jsonl" | Select-Object -First 1
+          if (-not $f) { throw 'Nenhum arquivo de telemetria gerado' }
+          Copy-Item $f.FullName smoke/telemetria-real.jsonl
+          $kinds = @{}
+          foreach ($line in Get-Content $f.FullName) { $o = $line | ConvertFrom-Json; $kinds[$o.k] = 1 + [int]$kinds[$o.k] }
+          $kinds.GetEnumerator() | Sort-Object Name | ForEach-Object { "{0,-8} {1}" -f $_.Name, $_.Value } | Tee-Object smoke/telemetria-tipos.txt
+          foreach ($k in 'meta','cpu','mem','disk','net','procs','http','tcp','dns','trace') { if (-not $kinds.ContainsKey($k)) { throw "Faltou o tipo '$k' na telemetria" } }
+          Get-Content $f.FullName -TotalCount 40 | Out-File smoke/telemetria-amostra.txt
+
       - name: Abrir o app e capturar as abas
         shell: pwsh
         run: |
-          $d = New-Item -ItemType Directory -Force smoke
-          $pkg = New-Item -ItemType Directory -Force smoke/pkg
-          $lines = @('2026/11/23 10:00:00.100000 stAgentSvc p1 t1 info main.cpp:145 main ======= stAgentSvc 141.1.14.2843 starting ======',
-                     '2026/11/23 10:00:05.100000 stAgentSvc p1 t1 info tunnel.cpp:1 nsTunnel flow to host: achecker-acme.goskope.com',
-                     '2026/11/23 10:00:06.100000 stAgentSvc p1 t1 info c.cpp:825 clientStatusHandler [sessId 1] Caching client status, event: Tunnel Up, actor: System, time: 1, service: 1',
-                     '2026/11/23 10:20:00.100000 stAgentSvc p1 t1 info c.cpp:825 clientStatusHandler [sessId 1] Caching client status, event: Tunnel Down, actor: System, time: 2, service: 1',
-                     '2026/11/23 10:30:00.100000 stAgentSvc p1 t1 error x.cpp:1 Something new 1')
-          foreach ($i in 0..11) { $lines += ('2026/11/23 10:{0:00}:00.100000 stAgentSvc p1 t1 warn nsHTTPClient.cpp:537 downloader curl_easy_perform failed, code 28, error Timeout was reached' -f (5 + $i)) }
-          Set-Content smoke/pkg/nsdebuglog.log $lines
-          Set-Content smoke/pkg/install.log "NSClient Version: 141.1.14.2843`n  PRETTY_NAME: `"Ubuntu 24.04.4 LTS`""
-          Compress-Archive smoke/pkg/* smoke/NetskopeLogs-sintetico.zip
-
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing, UIAutomationClient, UIAutomationTypes
           function Shot($name) {
             $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
@@ -43,40 +48,89 @@ jobs:
             $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
             $bmp.Save("smoke/$name.png"); $g.Dispose(); $bmp.Dispose()
           }
-          $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList (Resolve-Path smoke/NetskopeLogs-sintetico.zip).Path -PassThru
-          Start-Sleep 15
-          if ($p.HasExited) { throw "O app fechou sozinho (código $($p.ExitCode))" }
-          Shot '1-resumo'
-          $root = [System.Windows.Automation.AutomationElement]::RootElement
-          $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
-          $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
-          if (-not $win) { throw 'Janela do app não encontrada' }
-          $tabCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
-          $tabs = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants, $tabCond)
-          Write-Host "Abas encontradas: $($tabs.Count)"
-          $n = 2
-          foreach ($t in $tabs) {
-            if ($t.Current.Name -like 'Resumo*') { continue }
-            $t.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+          function Capture($prefix, [string[]]$files) {
+            $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList ($files | ForEach-Object { '"' + (Resolve-Path $_).Path + '"' }) -PassThru
+            Start-Sleep 18
+            if ($p.HasExited) { throw "[$prefix] o app fechou sozinho (código $($p.ExitCode))" }
+            $root = [System.Windows.Automation.AutomationElement]::RootElement
+            $cond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, $p.Id)
+            $win = $root.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
+            if (-not $win) { throw "[$prefix] janela do app não encontrada" }
+            $win.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern).SetWindowVisualState([System.Windows.Automation.WindowVisualState]::Maximized)
             Start-Sleep 2
-            $safe = ($t.Current.Name -replace '[^\w]+', '-').Trim('-').ToLower()
-            Shot ("{0}-{1}" -f $n, $safe); $n++
+            $tabCond = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::TabItem)
+            $tabs = $win.FindAll([System.Windows.Automation.TreeScope]::Descendants, $tabCond)
+            Write-Host "[$prefix] abas: $($tabs.Count)"
+            $n = 1
+            foreach ($t in $tabs) {
+              $t.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+              Start-Sleep 2
+              $safe = ($t.Current.Name -replace '[^\w]+', '-').Trim('-').ToLower()
+              Shot ("{0}-{1:00}-{2}" -f $prefix, $n, $safe); $n++
+            }
+            if ($p.HasExited) { throw "[$prefix] o app fechou durante a navegação" }
+            Stop-Process -Id $p.Id
+            Start-Sleep 2
           }
-          if ($p.HasExited) { throw 'O app fechou durante a navegação' }
-          Stop-Process -Id $p.Id
+
+          # A) só a telemetria real coletada no runner
+          Capture 'A' @('smoke/telemetria-real.jsonl')
+
+          # B) logs sintéticos + telemetria sintética (queda de Wi-Fi às 10:09:30 seguida de timeouts)
+          $pkg = New-Item -ItemType Directory -Force smoke/pkg
+          $L = { param($t, $lvl, $src, $msg) "2026/11/23 $t.100000 stAgentSvc p1 t1 $lvl $src $msg" }
+          $lines = @(
+            (& $L '10:00:00' 'info' 'main.cpp:145' 'main ======= stAgentSvc 141.1.14.2843 starting ======'),
+            (& $L '10:00:03' 'info' 'GatewaySelection.cpp:569' 'gslb [NPA]: post client rtt pop:BR-SAO1 ip:163.116.224.49 rtt:9'),
+            (& $L '10:00:03' 'info' 'GatewaySelection.cpp:569' 'gslb [NPA]: post client rtt pop:BR-GIG1 ip:163.116.228.122 rtt:65'),
+            (& $L '10:00:05' 'info' 'tunnel.cpp:1' 'nsTunnel flow to host: achecker-acme.goskope.com'),
+            (& $L '10:00:06' 'info' 'c.cpp:825' 'clientStatusHandler [sessId 1] Caching client status, event: Tunnel Up, actor: System, time: 1, service: 1'),
+            (& $L '10:02:30' 'info' 'bypassAppMgr.cpp:1720' 'BypassAppMgr bypassing flow to exception host: www.youtube.com, process: chrome, Dest IP: 1.2.3.4, Dest Port: 443, Src IP: 10.0.0.2'),
+            (& $L '10:02:31' 'info' 'bypassAppMgrUDP.cpp:250' 'BypassAppMgr Blocking UDP connection from process: chrome, dest IP:142.251.154.119:443, src IP 192.168.18.13:38365'),
+            (& $L '10:09:40' 'info' 'c.cpp:825' 'clientStatusHandler [sessId 1] Caching client status, event: Tunnel Down, actor: System, time: 2, service: 1'),
+            (& $L '10:11:00' 'info' 'c.cpp:825' 'clientStatusHandler [sessId 1] Caching client status, event: Tunnel Up, actor: System, time: 3, service: 1'),
+            (& $L '10:30:00' 'info' 'c.cpp:825' 'clientStatusHandler [sessId 1] Caching client status, event: User Disabled, actor: User, time: 4, service: 1'),
+            (& $L '10:40:00' 'info' 'x.cpp:1' 'nsAgentSvc ======= Log collection complete =======')
+          )
+          foreach ($i in 0..5) { $lines += (& $L ('10:01:{0:00}' -f ($i * 5)) 'info' 'tunnel.cpp:1296' 'nsTunnel TLS Tunneling flow from addr: 100.65.0.2:5000, process: chrome to host: teams.microsoft.com, addr: 52.123.128.14:443 to nsProxy') }
+          foreach ($i in 0..11) { $lines += (& $L ('10:10:{0:00}' -f ($i * 4)) 'warn' 'nsHTTPClient.cpp:537' 'downloader curl_easy_perform failed, code 28, error Timeout was reached') }
+          Set-Content smoke/pkg/nsdebuglog.log ($lines | Sort-Object)
+          Set-Content smoke/pkg/install.log "NSClient Version: 141.1.14.2843`n  PRETTY_NAME: `"Ubuntu 24.04.4 LTS`""
+          $tel = New-Object System.Collections.Generic.List[string]
+          $tel.Add('{"t":"2026-11-23T10:00:00-03:00","k":"meta","host":"PC-SINTETICO","os":"Windows 11 23H2","cpu":"Intel i7","cores":8,"ramMb":16000,"collector":"3.0.0","interval":30}')
+          $t0 = [datetime]'2026-11-23T10:00:00'
+          for ($i = 0; $i -le 80; $i++) {
+            $ts = $t0.AddSeconds(30 * $i); $iso = $ts.ToString('yyyy-MM-ddTHH:mm:ss') + '-03:00'
+            $spike = $ts -ge $t0.AddMinutes(9) -and $ts -le $t0.AddMinutes(11)
+            $down = $ts -ge $t0.AddSeconds(570) -and $ts -lt $t0.AddSeconds(630)
+            $cpu = if ($spike) { 97 } else { 18 + ($i % 7) }
+            $tel.Add("{`"t`":`"$iso`",`"k`":`"cpu`",`"v`":$cpu}")
+            $tel.Add("{`"t`":`"$iso`",`"k`":`"mem`",`"usedPct`":$(55 + $i % 4),`"availMb`":7000,`"totalMb`":16000}")
+            if ($down) { $tel.Add("{`"t`":`"$iso`",`"k`":`"wifi`",`"connected`":false}") }
+            else { $sig = if ($ts.Minute -eq 9) { 32 } else { 82 + ($i % 5) }; $tel.Add("{`"t`":`"$iso`",`"k`":`"wifi`",`"connected`":true,`"ssid`":`"Corp`",`"bssid`":`"aa:bb:cc:dd:ee:01`",`"signal`":$sig,`"rssi`":$([int]($sig/2-100)),`"rx`":866,`"tx`":780,`"band`":`"5 GHz`",`"ch`":`"36`"}") }
+            $rtt = if ($down) { 380 } else { 11 + ($i % 4) }; $loss = if ($down) { 50 } else { 0 }
+            $tel.Add("{`"t`":`"$iso`",`"k`":`"ping`",`"label`":`"Gateway local`",`"rtt`":$rtt,`"loss`":$loss,`"jitter`":2}")
+            if ($i % 2 -eq 0) { $tel.Add("{`"t`":`"$iso`",`"k`":`"http`",`"label`":`"outlook.office.com`",`"dns`":12,`"tcp`":18,`"tls`":45,`"ttfb`":$(160 + $i % 30),`"total`":$(260 + $i % 40),`"code`":200,`"ok`":true}") }
+            if ($i % 4 -eq 0) { $n = if ($spike) { 'MsMpEng' } else { 'chrome' }; $c = if ($spike) { 85 } else { 9 }; $tel.Add("{`"t`":`"$iso`",`"k`":`"procs`",`"top`":[{`"n`":`"$n`",`"cpu`":$c,`"memMb`":900},{`"n`":`"Teams`",`"cpu`":4,`"memMb`":650}]}") }
+            if ($i % 10 -eq 0) { $tel.Add("{`"t`":`"$iso`",`"k`":`"disk`",`"d`":`"C:`",`"usedPct`":71,`"freeGb`":68,`"totalGb`":237}") }
+          }
+          $tel.Add('{"t":"2026-11-23T10:05:00-03:00","k":"trace","target":"gateway-acme.goskope.com","hops":[{"ttl":1,"ip":"192.168.0.1","rtt":2},{"ttl":2,"ip":"200.200.1.1","rtt":8},{"ttl":3,"ip":"163.116.224.49","rtt":12}]}')
+          Set-Content smoke/pkg/nla-telemetry-PC-SINTETICO-20261123.jsonl $tel
+          Compress-Archive smoke/pkg/* smoke/pacote-sintetico.zip
+          Capture 'B' @('smoke/pacote-sintetico.zip')
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: screenshots
-          path: smoke/*.png
+          path: smoke/*
 
-      - name: Anexar screenshots a uma release em rascunho
+      - name: Anexar resultados a uma release em rascunho
         if: always() && github.event_name == 'workflow_dispatch'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete smoke-screenshots -y 2>$null
-          $files = (Get-ChildItem smoke/*.png).FullName
-          if ($files) { gh release create smoke-screenshots @files --draft --title "Screenshots do teste de fumaça" --notes "Gerado automaticamente; não é uma versão." }
+          $files = (Get-ChildItem smoke -File | Where-Object { $_.Extension -in '.png', '.txt', '.jsonl' }).FullName
+          if ($files) { gh release create smoke-screenshots @files --draft --title "Resultados do teste de fumaça" --notes "Gerado automaticamente; não é uma versão." }
