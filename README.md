@@ -18,7 +18,13 @@ Aplicativo **nativo para Windows** (C#/.NET 8, WPF) que analisa o pacote de logs
 | **Dispositivo** | **Baseline** de CPU, memória, disco, E/S, bateria e Wi-Fi (sinal, RSSI, taxa, canal, AP): mediana, p95, mín./máx., % do tempo acima do limite, anomalias e processos mais pesados em cada pico. |
 | **Rede** | Disponibilidade por túnel, latência até os POPs medida pelo próprio cliente (GSLB), POP mais rápido, histórico de IP de saída, ping/perda/jitter, DNS, TCP até o POP e traceroute. |
 | **Aplicações** | Tempo por fase (DNS, TCP, TLS, 1º byte, total) dos testes do coletor e tráfego por processo/destino: tunelado, bypass e UDP/QUIC bloqueado. |
+| **Desempenho** | Métricas no estilo do DEM tiradas só dos logs: atraso das tarefas do cliente (responsividade da máquina), travamentos internos, suspensões, processos que disputam CPU, mudanças de rede, NXDOMAIN, RTT e retransmissões até o POP do Private Access, quedas e tempo de reconexão. |
+| **Configuração** | Configuração efetiva traduzida: steering, detecção on-prem (e por que a máquina está On/Off Prem), exceções, apps com certificado fixo, fail-close, permissões do usuário, licença DEM, postura. |
 | **Não classificados / Arquivos / Explorador** | Erros sem padrão conhecido, arquivos lidos e busca em todas as linhas. |
+
+No **Resumo**, o app responde às perguntas que o suporte faz primeiro (sintoma, desde quando, Internet ou Private Access, onde a máquina estava, o que mudou, o que interfere, desempenho, período coberto por cada log e próximo passo). Na aba **Rede** ficam as sessões do Private Access (POP, motivo de cada queda, tempo até reconectar), DNS e domínio de pesquisa por interface e o resumo das capturas `.pcap` do pacote (retransmissões, RST, SYN sem resposta, DNS, alertas TLS).
+
+O app também aponta, com passo a passo: mudanças de rede em excesso e sua origem (containers Docker, VMs, VPNs), domínio de pesquisa DNS sendo anexado a nomes públicos, redes locais sobrepostas às rotas do Private Access, agentes de segurança consumindo CPU, POP mais lento que o melhor disponível e reautenticação programada (separada das quedas reais).
 
 Todos os gráficos têm faixas de limite, marcação dos incidentes e dica com o valor no ponto. O relatório pode ser **copiado** ou **salvo** em Markdown para anexar ao chamado.
 

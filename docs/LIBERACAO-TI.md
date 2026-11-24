@@ -27,7 +27,7 @@ Cada nova versão tem hashes novos e precisa ser liberada de novo.
 
 Conferir um hash no Windows:
 ```powershell
-Get-FileHash .\NetskopeLogAnalyzer-3.0.0-Setup.exe -Algorithm SHA256
+Get-FileHash .\NetskopeLogAnalyzer-3.1.0-Setup.exe -Algorithm SHA256
 ```
 
 ## Instalação silenciosa (Intune, SCCM, GPO)

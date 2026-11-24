@@ -1,14 +1,12 @@
-**Netskope Log Analyzer 3.0.0 — análise de experiência no nível do DEM, sem licença**
+**Netskope Log Analyzer 3.1.0 — visão de suporte/TAC e desempenho pelos logs**
 
-- **Incidentes com causa raiz:** cada queda ou degradação com horário de início e fim, impacto e causas prováveis ranqueadas por confiança (Wi-Fi, sinal, CPU/memória/disco, energia, perda, latência até o POP, DNS, troca de POP, ação do usuário, erro do cliente), com evidências e resolução.
-- **Experience Score** 0–100 por janela de 5 min (Dispositivo, Rede, Netskope, Aplicação) e o gargalo de cada período.
-- **Baseline do dispositivo:** CPU, memória, disco, E/S, bateria e Wi-Fi com mediana, p95, picos, % do tempo acima do limite, anomalias e processos pesados em cada pico.
-- **Rede e Netskope:** disponibilidade do túnel, latência até cada POP medida pelo cliente, POP mais rápido, histórico de IP de saída, ping/perda/jitter, DNS, TCP até o POP e traceroute.
-- **Aplicações:** tempo por fase (DNS, TCP, TLS, 1º byte) e tráfego por processo: tunelado, bypass e UDP/QUIC bloqueado.
-- **Coletor de telemetria** embutido no app (Windows, `--collect` sem janela) e `nla-collect.sh` para Linux/macOS. Exporta um pacote único com logs do `nsdiag` + telemetria.
-- Leitura dos *snapshots* do `nsdiag` (processos, memória, disco, Wi-Fi, interfaces) em inglês e português.
-- **Atualização automática** com verificação SHA-256 e políticas do TI (`DisableUpdates`, `UpdateFeedUrl`, `DisableCollector`, `Tenant`).
+- **Resumo do caso:** as perguntas que o suporte faz primeiro respondidas automaticamente (sintoma, desde quando, Internet ou Private Access, onde a máquina estava, o que mudou, o que interfere, desempenho, cobertura dos logs, próximo passo).
+- **Nova aba Desempenho:** métricas no estilo do DEM sem licença e sem coletor — atraso das tarefas do cliente, travamentos internos, suspensões, processos que disputam CPU, mudanças de rede, NXDOMAIN, RTT e retransmissões do túnel Private Access, quedas e tempo de reconexão.
+- **Sessões do Private Access:** cada queda com motivo (gateway sem resposta, sessão expirada, DNS, parada pelo cliente), POP, tempo sem túnel e tentativas de reconexão. Reautenticação programada deixa de contar como falha; períodos com a máquina inativa não contam como queda.
+- **Novas detecções com passo a passo:** mudanças de rede em excesso e a origem (Docker/VMs/VPNs), domínio de pesquisa DNS anexado a nomes públicos, redes locais sobrepostas às rotas do Private Access, agentes de segurança com uso contínuo de CPU, POP mais lento que o melhor, atrasos de execução da máquina.
+- **Nova aba Configuração:** configuração efetiva traduzida (steering, detecção on-prem e por que a máquina está On/Off Prem, exceções, cert pinning, fail-close, permissões, licença DEM).
+- **Capturas .pcap/.pcapng** do pacote resumidas sem Wireshark (retransmissões, RST, SYN sem resposta, DNS, alertas TLS, principais destinos).
+- Menos ruído: canal de notificação da interface (403), Firefox ausente, broker NPA, erros só da interface quando a máquina está sem rede; falhas genéricas mostram o componente (GSLB, configuração, status…). Score marcado como parcial quando falta algum componente.
+- Removida a recomendação de abrir chamado: todas as resoluções são executáveis pelo próprio analista.
 
-**Importante:** o pacote de logs do Netskope sozinho dá as métricas que o próprio cliente registra (POPs, túneis, fluxos, erros) e fotos pontuais da máquina. O **baseline contínuo de CPU, memória, disco e Wi-Fi exige o coletor** rodando na máquina durante o período do problema.
-
-**Os executáveis não têm assinatura digital.** Libere pelos hashes abaixo — veja [docs/LIBERACAO-TI.md](https://github.com/rcalcic/netskope-log-analyzer/blob/main/docs/LIBERACAO-TI.md), que agora inclui as conexões de rede do app e as políticas.
+**Os executáveis não têm assinatura digital.** Libere pelos hashes abaixo — veja [docs/LIBERACAO-TI.md](https://github.com/rcalcic/netskope-log-analyzer/blob/main/docs/LIBERACAO-TI.md).
