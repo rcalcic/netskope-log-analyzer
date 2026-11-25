@@ -12,6 +12,16 @@ public partial class App : Application
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandled;
 
+        // Versões 3.0/3.1 tinham um coletor iniciado no logon ("--collect"). Ele foi removido:
+        // apaga a entrada de inicialização antiga; se foi ela que abriu o app, sai sem mostrar janela.
+        try
+        {
+            using var run = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
+            run?.DeleteValue("NetskopeLogAnalyzerCollector", throwOnMissingValue: false);
+        }
+        catch (Exception) { }
+        if (e.Args.Any(a => a.Equals("--collect", StringComparison.OrdinalIgnoreCase))) { Shutdown(0); return; }
+
         var window = new MainWindow();
         MainWindow = window;
         window.Show();
