@@ -196,7 +196,7 @@ public class V31Tests
         var r = Full();
         var f = Assert.Single(r.Findings, x => x.Key == "heavyproc");
         Assert.Contains("falcon-sensor-bpf", f.Title, StringComparison.Ordinal);
-        Assert.Contains(r.Performance, p => p.Name.StartsWith("Processos que mais usam CPU", StringComparison.Ordinal));
+        Assert.Contains(r.Performance, p => p.Group == TacInsights.ResourceGroup && p.Name == "Maiores consumidores de memória");
         Assert.Contains(r.Performance, p => p.Name == "Quedas do Private Access");
         Assert.Contains(r.Performance, p => p.Name.StartsWith("RTT até o gateway", StringComparison.Ordinal));
     }
