@@ -60,7 +60,7 @@ public class V41Tests
         var r = new Analyzer().AnalyzeItems(new[]
         {
             Item("npadebuglog.log", "[PC:2026-11-23 10:00:03.000 -03:00] t1 [info] x.cpp:1:f():0x1 Received device info request. Device Info: {\"device\": {\"assessment\": {\"user_email\": \n"),
-            Item("nsconfig.json", "{\"cache\":{\"device\":{\"hostname\":\"PC‮evil\u0007\"}}}"),
+            Item("nsconfig.json", "{\"cache\":{\"device\":{\"hostname\":\"PC\\u202Eevil\\u0007\"}}}"),
         });
         var host = r.Identity.First(i => i.Label == "Hostname").Value;
         Assert.DoesNotContain('‮', host);
