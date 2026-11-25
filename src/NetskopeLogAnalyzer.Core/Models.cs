@@ -134,6 +134,8 @@ public sealed class AnalysisResult
     public List<string> TelemetrySources { get; } = new();
     /// <summary>Avisos sobre dados ausentes (o que não pôde ser medido e por quê).</summary>
     public List<string> DataGaps { get; } = new();
+    /// <summary>Quem é o usuário e qual é a máquina (e-mail, login, hostname, série, IDs, interfaces).</summary>
+    public List<IdentityItem> Identity { get; } = new();
 
     // ---- v3.1: visão de TAC
     public List<ConfigItem> Config { get; } = new();

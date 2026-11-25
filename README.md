@@ -10,7 +10,7 @@ Aplicativo **nativo para Windows** (C#/.NET 8, WPF) que analisa o pacote de logs
 
 | Aba | Conteúdo |
 |---|---|
-| **Resumo** | Veredito, **Experience Score** (0–100), incidentes, disponibilidade do túnel, causa principal, versão do cliente, tenant, steering, POP, IP de saída e principais pontos. |
+| **Resumo** | **Usuário e máquina** (e-mail registrado, login do sistema, hostname, fabricante, modelo, série, IDs do Netskope, interfaces e IPs, forma de registro), veredito, **Experience Score** (0–100), incidentes, disponibilidade do túnel, causa principal, versão do cliente, tenant, steering, POP, IP de saída e principais pontos. |
 | **Incidentes** | Cada queda ou degradação com **horário de início e fim**, duração, impacto e **causas prováveis ranqueadas por confiança**, com as evidências (linhas de log e métricas) e a resolução passo a passo. |
 | **Experiência** | Score por janela de 5 min dividido em Dispositivo, Rede, Netskope e Aplicação, com o gargalo de cada período. |
 | **Linha do tempo** | Serviço, registro, túnel conectado/derrubado, desativação pelo usuário, troca de rede/IP de saída/POP, eventos de energia e gráfico de erros por minuto. |
@@ -26,7 +26,7 @@ No **Resumo**, o app responde às perguntas que o suporte faz primeiro (sintoma,
 
 O app também aponta, com passo a passo: mudanças de rede em excesso e sua origem (containers Docker, VMs, VPNs), domínio de pesquisa DNS sendo anexado a nomes públicos, redes locais sobrepostas às rotas do Private Access, agentes de segurança consumindo CPU, POP mais lento que o melhor disponível e reautenticação programada (separada das quedas reais).
 
-Todos os gráficos têm faixas de limite, marcação dos incidentes e dica com o valor no ponto. O relatório pode ser **copiado** ou **salvo** em Markdown para anexar ao chamado.
+Todos os gráficos têm faixas de limite, marcação dos incidentes e dica com o valor no ponto. O relatório pode ser **copiado** ou **salvo** em Markdown.
 
 ## Análise direcionada pelo relato do usuário
 

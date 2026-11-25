@@ -30,6 +30,8 @@ public static class Report
         var sb = new StringBuilder();
         sb.AppendLine("# Análise de logs Netskope" + (F.Host != null ? " — " + F.Host : ""));
         sb.AppendLine($"Período: {Time(r.Start)} → {Time(r.End)} | Versão: {F.Version ?? "—"} | SO: {F.OsName ?? F.Os ?? "—"} | Tenant: {F.TenantHost ?? F.TenantId ?? "—"}");
+        var who = string.Join(" · ", r.Identity.Where(i => i.Label is "E-mail registrado no Netskope" or "Login no sistema operacional").Select(i => i.Value));
+        if (who.Length > 0) sb.AppendLine($"Usuário: {who}");
         sb.AppendLine($"Resultado: {Verdict(r)} ({r.Count(Severity.Critical)} crítico(s), {r.Count(Severity.Warning)} de atenção, {r.Count(Severity.Info)} informativo(s), {r.Count(Severity.Noise)} ruído(s) conhecido(s)).");
         if (r.Score is double sc) sb.AppendLine($"Experience Score: {sc:0}/100 ({ExperienceScore.Band(sc)}) em {r.Scores.Count} janelas de 5 min.");
         foreach (var (svc, av) in r.Availability) sb.AppendLine($"Disponibilidade {svc}: {av:0.#}% do tempo conectado.");
@@ -38,6 +40,16 @@ public static class Report
         if (r.LogUtcOffset is TimeSpan tzo) sb.AppendLine($"Horários no fuso da máquina do usuário (UTC{(tzo < TimeSpan.Zero ? "−" : "+")}{tzo.Duration():hh\\:mm}).");
         sb.AppendLine();
 
+        if (r.Identity.Count > 0)
+        {
+            sb.AppendLine("## Usuário e máquina");
+            foreach (var g in r.Identity.GroupBy(i => i.Group))
+            {
+                sb.AppendLine($"**{g.Key}**");
+                foreach (var i in g) sb.AppendLine($"- {i.Label}: {i.Value.Replace("\n", "; ")} _({i.Source})_");
+            }
+            sb.AppendLine();
+        }
         if (r.CaseSummary.Count > 0)
         {
             sb.AppendLine("## Resumo do caso");

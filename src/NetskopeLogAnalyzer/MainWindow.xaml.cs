@@ -164,6 +164,7 @@ public partial class MainWindow : Window
         _filter = _result.Findings.Any(f => f.FocusTags.Count > 0) ? "focus" : "problems";
         RenderSummary();
         SummaryPanel.Children.Insert(Math.Min(2, SummaryPanel.Children.Count), FocusBlock());
+        SummaryPanel.Children.Insert(Math.Min(2, SummaryPanel.Children.Count), IdentityBlock());
         RenderTimeline();
         RenderChart();
         RenderFilters();
@@ -276,6 +277,8 @@ public partial class MainWindow : Window
             ("Private Access", ServiceElement(2, F.NpaLast)),
         };
         void Add(string label, string? value) { if (!string.IsNullOrWhiteSpace(value)) rows.Add((label, T(value, 14, FontWeights.SemiBold))); }
+        Add("Usuário", r.Identity.FirstOrDefault(i => i.Label == "E-mail registrado no Netskope")?.Value);
+        Add("Login", r.Identity.FirstOrDefault(i => i.Label == "Login no sistema operacional")?.Value);
         Add("Dispositivo", F.Host);
         Add("Sistema", F.OsName ?? F.Os);
         Add("Modelo", F.Model);
@@ -767,7 +770,7 @@ public partial class MainWindow : Window
 
     private void CopyReport_Click(object sender, RoutedEventArgs e)
     {
-        if (_result != null && TryCopy(Report.ToMarkdown(_result))) ShowToast("Relatório copiado — cole no chamado.");
+        if (_result != null && TryCopy(Report.ToMarkdown(_result))) ShowToast("Relatório copiado.");
     }
 
     private void SaveReport_Click(object sender, RoutedEventArgs e)

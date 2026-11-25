@@ -87,6 +87,7 @@ public sealed class Analyzer
     private DateTime? _collectedAt;
     private readonly Dictionary<string, string> _texts = new(StringComparer.OrdinalIgnoreCase);
     private TacInsights? _tac;
+    private readonly IdentityCollector _id = new();
 
     // ------------------------------------------------------------------ entrada
 
@@ -215,6 +216,7 @@ public sealed class Analyzer
             try
             {
 
+                _id.OnFile(baseName, text);
                 if (TelemetryParser.LooksLikeTelemetry(baseName, text))
                 {
                     TelemetryParser.Parse(text, baseName, _r);
@@ -263,6 +265,7 @@ public sealed class Analyzer
         }
         _tac = new TacInsights(_r, _texts, _json);
         Guard("análises de suporte", _tac.Run);
+        Guard("identificação do usuário e da máquina", () => _id.Finish(_r, _json));
         foreach (var f in _r.Findings)
         {
             f.Steps.AddRange(KnowledgeBase.BuildSteps(f, _r.DetectedOs, _r.Facts.TenantHost));
@@ -376,6 +379,7 @@ public sealed class Analyzer
             var entry = new LogEntry(fi, time, level, line, msg, src);
             _r.Entries.Add(entry);
             CollectEvents(entry, file.BaseName);
+            _id.OnLine(msg, file.BaseName);
             Classify(entry, file);
         }
     }
