@@ -3,20 +3,76 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              ShutdownMode="OnMainWindowClose">
   <Application.Resources>
-    <SolidColorBrush x:Key="Ink" Color="#111418"/>
-    <SolidColorBrush x:Key="Night" Color="#0E1116"/>
-    <SolidColorBrush x:Key="Mute" Color="#5B6270"/>
-    <SolidColorBrush x:Key="Line" Color="#E3E6EA"/>
-    <SolidColorBrush x:Key="Soft" Color="#F4F6F8"/>
-    <SolidColorBrush x:Key="Red" Color="#E6261F"/>
-    <SolidColorBrush x:Key="Blue" Color="#0A5CFF"/>
-    <SolidColorBrush x:Key="Amber" Color="#FFB400"/>
-    <SolidColorBrush x:Key="Green" Color="#00A05A"/>
+    <!-- Paleta Netskope; valores finais aplicados por Theme.Apply (claro/escuro) -->
+    <SolidColorBrush x:Key="Background" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Surface" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Ink" Color="#0F2329"/>
+    <SolidColorBrush x:Key="Night" Color="#003B49"/>
+    <SolidColorBrush x:Key="NightMute" Color="#9ADBE8"/>
+    <SolidColorBrush x:Key="Mute" Color="#53565A"/>
+    <SolidColorBrush x:Key="Line" Color="#DCE5E8"/>
+    <SolidColorBrush x:Key="Soft" Color="#F1F6F7"/>
+    <SolidColorBrush x:Key="Accent" Color="#00587C"/>
+    <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="Red" Color="#D92D20"/>
+    <SolidColorBrush x:Key="Blue" Color="#00799A"/>
+    <SolidColorBrush x:Key="BlueBg" Color="#E1F5F9"/>
+    <SolidColorBrush x:Key="Amber" Color="#FFA400"/>
+    <SolidColorBrush x:Key="AmberText" Color="#8A4F00"/>
+    <SolidColorBrush x:Key="AmberBg" Color="#FFF4DE"/>
+    <SolidColorBrush x:Key="Green" Color="#008F72"/>
+
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="{DynamicResource Surface}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+      <Setter Property="CaretBrush" Value="{DynamicResource Ink}"/>
+      <Setter Property="SelectionBrush" Value="{DynamicResource Accent}"/>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+    </Style>
+    <Style TargetType="ToolTip">
+      <Setter Property="Background" Value="{DynamicResource Surface}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+    </Style>
+    <Style TargetType="ListBox">
+      <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+    </Style>
+
+    <!-- Chip de seleção múltipla (sintomas) -->
+    <Style x:Key="Chip" TargetType="ToggleButton">
+      <Setter Property="Margin" Value="0,0,8,8"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ToggleButton">
+            <Border x:Name="Bd" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1.5" CornerRadius="16" Padding="12,6">
+              <ContentPresenter x:Name="Cp" TextElement.Foreground="{DynamicResource Ink}" TextElement.FontWeight="SemiBold"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Blue}"/>
+              </Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                <Setter TargetName="Cp" Property="TextElement.Foreground" Value="{DynamicResource OnAccent}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
     <Style x:Key="Pill" TargetType="Button">
-      <Setter Property="Foreground" Value="{StaticResource Ink}"/>
-      <Setter Property="Background" Value="White"/>
-      <Setter Property="BorderBrush" Value="{StaticResource Ink}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
+      <Setter Property="Background" Value="{DynamicResource Surface}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Ink}"/>
       <Setter Property="BorderThickness" Value="2"/>
       <Setter Property="Padding" Value="18,0"/>
       <Setter Property="MinHeight" Value="40"/>
@@ -34,7 +90,7 @@
                 <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
               </Trigger>
               <Trigger Property="IsKeyboardFocused" Value="True">
-                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Blue}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Blue}"/>
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
                 <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
@@ -46,14 +102,15 @@
     </Style>
 
     <Style x:Key="PillDark" TargetType="Button" BasedOn="{StaticResource Pill}">
-      <Setter Property="Foreground" Value="White"/>
-      <Setter Property="Background" Value="{StaticResource Ink}"/>
+      <Setter Property="Foreground" Value="{DynamicResource OnAccent}"/>
+      <Setter Property="Background" Value="{DynamicResource Accent}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Accent}"/>
     </Style>
 
     <Style x:Key="PillOnNight" TargetType="Button" BasedOn="{StaticResource Pill}">
       <Setter Property="Foreground" Value="White"/>
       <Setter Property="Background" Value="Transparent"/>
-      <Setter Property="BorderBrush" Value="#5B6270"/>
+      <Setter Property="BorderBrush" Value="#3F7A8A"/>
     </Style>
 
     <Style x:Key="Small" TargetType="Button" BasedOn="{StaticResource Pill}">
@@ -69,13 +126,14 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="RadioButton">
-            <Border x:Name="Bd" Background="White" BorderBrush="{StaticResource Ink}" BorderThickness="1.5" CornerRadius="18" Padding="14,6">
-              <ContentPresenter x:Name="Cp" TextElement.Foreground="{StaticResource Ink}" TextElement.FontWeight="SemiBold"/>
+            <Border x:Name="Bd" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Ink}" BorderThickness="1.5" CornerRadius="18" Padding="14,6">
+              <ContentPresenter x:Name="Cp" TextElement.Foreground="{DynamicResource Ink}" TextElement.FontWeight="SemiBold"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Bd" Property="Background" Value="{StaticResource Ink}"/>
-                <Setter TargetName="Cp" Property="TextElement.Foreground" Value="White"/>
+                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource Accent}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                <Setter TargetName="Cp" Property="TextElement.Foreground" Value="{DynamicResource OnAccent}"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -90,12 +148,12 @@
         <Setter.Value>
           <ControlTemplate TargetType="TabItem">
             <Border x:Name="Bd" Padding="12,8" Margin="0,0,2,0" BorderThickness="0,0,0,3" BorderBrush="Transparent" Background="Transparent" Cursor="Hand">
-              <ContentPresenter ContentSource="Header" TextElement.Foreground="{StaticResource Mute}" x:Name="Cp"/>
+              <ContentPresenter ContentSource="Header" TextElement.Foreground="{DynamicResource Mute}" x:Name="Cp"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsSelected" Value="True">
-                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Ink}"/>
-                <Setter TargetName="Cp" Property="TextElement.Foreground" Value="{StaticResource Ink}"/>
+                <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource Accent}"/>
+                <Setter TargetName="Cp" Property="TextElement.Foreground" Value="{DynamicResource Ink}"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
@@ -108,10 +166,11 @@
       <Setter Property="IsReadOnly" Value="True"/>
       <Setter Property="HeadersVisibility" Value="Column"/>
       <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-      <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource Line}"/>
-      <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
-      <Setter Property="Background" Value="White"/>
-      <Setter Property="RowBackground" Value="White"/>
+      <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource Line}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Line}"/>
+      <Setter Property="Background" Value="{DynamicResource Surface}"/>
+      <Setter Property="RowBackground" Value="{DynamicResource Surface}"/>
+      <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
       <Setter Property="CanUserAddRows" Value="False"/>
       <Setter Property="SelectionMode" Value="Single"/>
       <Setter Property="RowHeaderWidth" Value="0"/>

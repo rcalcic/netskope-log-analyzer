@@ -15,11 +15,9 @@ namespace NetskopeLogAnalyzer;
 
 public partial class MainWindow
 {
-    private static readonly Brush[] Palette =
-    {
-        B("#0A5CFF"), B("#E6261F"), B("#00A05A"), B("#FFB400"), B("#7A3EF0"), B("#00A3BF"), B("#D13FA0"), B("#5B6270"),
-    };
-    private static readonly Brush BandCrit = B("#30E6261F"), BandWarn = B("#30FFB400");
+    private static Brush[] Palette => Theme.Palette;
+    private static Brush BandCrit => Theme.BandCrit;
+    private static Brush BandWarn => Theme.BandWarn;
     private static readonly CultureInfo Br = CultureInfo.GetCultureInfo("pt-BR");
 
     private AppSettings _settings = AppSettings.Load();
@@ -207,6 +205,7 @@ public partial class MainWindow
         var tags = new StackPanel { Orientation = Orientation.Horizontal };
         tags.Children.Add(Pill(Report.SeverityLabel(inc.Severity), fg, bg));
         tags.Children.Add(T($"{Tm(inc.Start)} → {inc.End:HH:mm:ss}  ·  duração {TelemetryParser.Fmt(inc.Duration)}  ·  {inc.Kind}", 12.5, fg: Mute, wrap: false));
+        if (inc.InFocusWindow) tags.Children.Add(Pill("◎ perto do horário informado", Theme.OnAccent, Theme.Accent));
         sp.Children.Add(tags);
         sp.Children.Add(T(inc.Title, 18, FontWeights.Bold, margin: new Thickness(0, 6, 0, 2)));
         if (inc.Impact.Length > 0) sp.Children.Add(T(inc.Impact, 14, fg: Ink));
@@ -255,7 +254,7 @@ public partial class MainWindow
                 TextWrapping = TextWrapping.NoWrap, HorizontalScrollBarVisibility = ScrollBarVisibility.Auto, VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             });
         }
-        return new Border { BorderBrush = LineBrush, BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(12), Background = White, Margin = new Thickness(0, 0, 0, 14), ClipToBounds = true, Child = grid };
+        return new Border { BorderBrush = inc.InFocusWindow ? Theme.Accent : LineBrush, BorderThickness = new Thickness(inc.InFocusWindow ? 2 : 1), CornerRadius = new CornerRadius(12), Background = White, Margin = new Thickness(0, 0, 0, 14), ClipToBounds = true, Child = grid };
     }
 
     // ================================================================= Experiência
@@ -509,10 +508,22 @@ public partial class MainWindow
 
     private void Settings_Click(object sender, RoutedEventArgs e)
     {
-        var w = new Window { Title = "Configurações", Owner = this, Width = 600, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize, Background = White, FontFamily = FontFamily, FontSize = 14 };
+        var w = new Window { Title = "Configurações", Owner = this, Width = 600, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize, Background = Theme.Background, Foreground = Theme.Ink, FontFamily = FontFamily, FontSize = 14 };
         var sp = new StackPanel { Margin = new Thickness(22) };
         sp.Children.Add(T("Configurações", 22, FontWeights.Bold, margin: new Thickness(0, 0, 0, 12)));
         sp.Children.Add(T("Este aplicativo só analisa pacotes de logs salvos pelos usuários. Nada é coletado nem enviado desta máquina; a única conexão é a verificação de atualização no GitHub.", 13, fg: Mute, margin: new Thickness(0, 0, 0, 8)));
+        sp.Children.Add(T("Aparência", 16, FontWeights.Bold, margin: new Thickness(0, 8, 0, 4)));
+        var themes = new WrapPanel();
+        var themeChoice = _settings.Theme;
+        foreach (var opt in new[] { Theme.System, Theme.Light, Theme.Dark })
+        {
+            var rb = new RadioButton { Content = opt == Theme.System ? "Igual ao Windows" : opt, GroupName = "theme", IsChecked = _settings.Theme == opt, Margin = new Thickness(0, 4, 18, 0), Foreground = Theme.Ink };
+            rb.Checked += (_, _) => themeChoice = opt;
+            themes.Children.Add(rb);
+        }
+        sp.Children.Add(themes);
+        sp.Children.Add(T("Tema escuro com a paleta da Netskope. Também dá para alternar pelo botão ☾/☀ no topo.", 12, fg: Mute, margin: new Thickness(0, 4, 0, 0)));
+
         sp.Children.Add(T("Atualizações", 16, FontWeights.Bold, margin: new Thickness(0, 16, 0, 4)));
         var autoCheck = new CheckBox { Content = "Verificar atualizações automaticamente", IsChecked = _settings.AutoCheckUpdates, Margin = new Thickness(0, 4, 0, 0) };
         var autoInstall = new CheckBox { Content = "Instalar atualizações automaticamente (pede confirmação do Windows)", IsChecked = _settings.AutoInstallUpdates, Margin = new Thickness(0, 4, 0, 0) };
@@ -529,7 +540,10 @@ public partial class MainWindow
         {
             _settings.AutoCheckUpdates = autoCheck.IsChecked == true;
             _settings.AutoInstallUpdates = autoInstall.IsChecked == true;
+            var themeChanged = _settings.Theme != themeChoice;
+            _settings.Theme = themeChoice;
             _settings.Save();
+            if (themeChanged) Theme.Apply(themeChoice);
             w.Close();
             ShowToast("Configurações salvas.");
         };

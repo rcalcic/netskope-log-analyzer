@@ -22,6 +22,10 @@ public partial class App : Application
         catch (Exception) { }
         if (e.Args.Any(a => a.Equals("--collect", StringComparison.OrdinalIgnoreCase))) { Shutdown(0); return; }
 
+        // tema: --theme claro|escuro (usado nos testes) ou a preferência salva
+        var themeArg = e.Args.FirstOrDefault(a => a.StartsWith("--theme=", StringComparison.OrdinalIgnoreCase))?[8..];
+        Theme.Apply(themeArg?.ToLowerInvariant() switch { "escuro" or "dark" => Theme.Dark, "claro" or "light" => Theme.Light, _ => AppSettings.Load().Theme });
+
         var window = new MainWindow();
         MainWindow = window;
         window.Show();

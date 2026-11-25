@@ -44,9 +44,22 @@ public partial class MainWindow : Window
 {
     private static Brush B(string hex) { var b = (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!; b.Freeze(); return b; }
 
-    private static readonly Brush Ink = B("#111418"), Mute = B("#5B6270"), LineBrush = B("#E3E6EA"), Soft = B("#F4F6F8"), White = Brushes.White,
-        Red = B("#E6261F"), Blue = B("#0A5CFF"), Amber = B("#FFB400"), AmberText = B("#8A5D00"), Green = B("#00A05A"), Gray = B("#8A919C"),
-        RedBg = B("#FDECEB"), AmberBg = B("#FFF6DC"), BlueBg = B("#E8F0FF"), GreenBg = B("#E4F6ED");
+    // pincéis do tema atual (claro/escuro, paleta Netskope) — ver Theme.cs
+    private static Brush Ink => Theme.Ink;
+    private static Brush Mute => Theme.Mute;
+    private static Brush LineBrush => Theme.Line;
+    private static Brush Soft => Theme.Soft;
+    private static Brush White => Theme.Surface;
+    private static Brush Red => Theme.Red;
+    private static Brush Blue => Theme.Blue;
+    private static Brush Amber => Theme.Amber;
+    private static Brush AmberText => Theme.AmberText;
+    private static Brush Green => Theme.Green;
+    private static Brush Gray => Theme.Gray;
+    private static Brush RedBg => Theme.RedBg;
+    private static Brush AmberBg => Theme.AmberBg;
+    private static Brush BlueBg => Theme.BlueBg;
+    private static Brush GreenBg => Theme.GreenBg;
     private static readonly FontFamily Mono = new("Consolas");
 
     private AnalysisResult? _result;
@@ -69,6 +82,7 @@ public partial class MainWindow : Window
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); Toast.Visibility = Visibility.Collapsed; };
         BuildLegends();
         InitV3();
+        InitV4();
     }
 
     // ================================================================= entrada de arquivos
@@ -109,7 +123,8 @@ public partial class MainWindow : Window
         var progress = new Progress<string>(s => TxtProgress.Text = s);
         try
         {
-            var result = await Task.Run(() => new Analyzer().AnalyzePaths(paths, progress));
+            var options = BuildOptions();
+            var result = await Task.Run(() => new Analyzer { Options = options }.AnalyzePaths(paths, progress));
             if (result.Entries.Count == 0 && result.Findings.Count == 0 && !result.HasTelemetry && result.Snapshots.Count == 0)
             {
                 TxtProgress.Text = "Nenhum log do Netskope reconhecido nesses arquivos.";
@@ -140,8 +155,9 @@ public partial class MainWindow : Window
         Tabs.Visibility = Visibility.Visible;
         BtnCopyReport.Visibility = Visibility.Visible;
         BtnSaveReport.Visibility = Visibility.Visible;
-        _filter = "problems";
+        _filter = _result.Findings.Any(f => f.FocusTags.Count > 0) ? "focus" : "problems";
         RenderSummary();
+        SummaryPanel.Children.Insert(Math.Min(2, SummaryPanel.Children.Count), FocusBlock());
         RenderTimeline();
         RenderChart();
         RenderFilters();
@@ -152,6 +168,7 @@ public partial class MainWindow : Window
         RenderIncidents();
         RenderExperience();
         RenderDevice();
+        DeviceResources();
         RenderNetwork();
         RenderApps();
         RenderPerformance();
@@ -322,8 +339,10 @@ public partial class MainWindow : Window
             sp.Children.Add(T(text, 12, fg: Mute, wrap: false));
             p.Children.Add(sp);
         }
+        TimelineLegend.Children.Clear();
         Dot(TimelineLegend, Green, "Conectado / registrado"); Dot(TimelineLegend, Red, "Queda / parada");
         Dot(TimelineLegend, Amber, "Desabilitado / alerta"); Dot(TimelineLegend, Blue, "Informativo");
+        ChartLegend.Children.Clear();
         Dot(ChartLegend, Red, "Erros e críticos", true); Dot(ChartLegend, Amber, "Alertas (warn)", true);
     }
 
@@ -441,6 +460,8 @@ public partial class MainWindow : Window
             ("problems", $"Problemas ({c + w})"), ("crit", $"Crítico ({c})"), ("warn", $"Atenção ({w})"),
             ("info", $"Informativo ({r.Count(Severity.Info)})"), ("noise", $"Ruído conhecido ({r.Count(Severity.Noise)})"), ("all", $"Todos ({r.Findings.Count})"),
         };
+        var focused = r.Findings.Count(f => f.FocusTags.Count > 0);
+        if (focused > 0) opts = opts.Prepend(("focus", $"◎ Relato do usuário ({focused})")).ToArray();
         foreach (var (key, label) in opts)
         {
             var rb = new RadioButton { Content = label, GroupName = "filter", Style = (Style)FindResource("Filter"), IsChecked = key == _filter };
@@ -457,13 +478,15 @@ public partial class MainWindow : Window
         "warn" => f.Severity == Severity.Warning,
         "info" => f.Severity == Severity.Info,
         "noise" => f.Severity == Severity.Noise,
+        "focus" => f.FocusTags.Count > 0,
         _ => true,
     };
 
     private void RenderFindings(Finding? focus = null)
     {
         FindingsPanel.Children.Clear();
-        var list = _result!.Findings.Where(PassesFilter).ToList();
+        // itens ligados ao relato do usuário (sintomas marcados) aparecem primeiro, mantendo a ordem de gravidade
+        var list = _result!.Findings.Where(PassesFilter).OrderBy(f => f.FocusTags.Count > 0 ? 0 : 1).ThenBy(f => f.Severity).ThenByDescending(f => f.Count).ToList();
         if (list.Count == 0)
         {
             FindingsPanel.Children.Add(new Border { Background = GreenBg, CornerRadius = new CornerRadius(14), Padding = new Thickness(20), Child = T("Nada nesta categoria.", 15, FontWeights.SemiBold, Green) });
@@ -505,6 +528,7 @@ public partial class MainWindow : Window
         var tags = new StackPanel { Orientation = Orientation.Horizontal };
         tags.Children.Add(Pill(Report.SeverityLabel(f.Severity), fg, bg));
         tags.Children.Add(T(f.Category, 12, fg: Mute, wrap: false));
+        foreach (var tag in f.FocusTags.Take(3)) tags.Children.Add(Pill("◎ " + tag, Theme.OnAccent, Theme.Accent));
         hl.Children.Add(tags);
         var titleLine = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
         titleLine.Inlines.Add(new Run(open ? "▾ " : "▸ ") { Foreground = Mute, FontSize = 16 });

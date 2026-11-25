@@ -22,11 +22,12 @@ public sealed class TimeChart : FrameworkElement
     public double? YMax { get; set; }
     public string Unit { get; set; } = "";
 
-    private static readonly Brush Axis = Freeze(new SolidColorBrush(Color.FromRgb(0x5B, 0x62, 0x70)));
-    private static readonly Pen GridPen = FreezePen(new Pen(new SolidColorBrush(Color.FromRgb(0xE3, 0xE6, 0xEA)), 1));
-    private static readonly Pen WarnPen = FreezePen(new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xB4, 0x00)), 1) { DashStyle = DashStyles.Dash });
-    private static readonly Pen CritPen = FreezePen(new Pen(new SolidColorBrush(Color.FromRgb(0xE6, 0x26, 0x1F)), 1) { DashStyle = DashStyles.Dash });
-    private static readonly Pen CursorPen = FreezePen(new Pen(new SolidColorBrush(Color.FromArgb(0x80, 0x11, 0x14, 0x18)), 1));
+    // cores do tema atual (claro/escuro)
+    private static Brush Axis => Theme.Mute;
+    private static Pen GridPen => FreezePen(new Pen(Theme.ChartGrid, 1));
+    private static Pen WarnPen => FreezePen(new Pen(Theme.Amber, 1) { DashStyle = DashStyles.Dash });
+    private static Pen CritPen => FreezePen(new Pen(Theme.Red, 1) { DashStyle = DashStyles.Dash });
+    private static Pen CursorPen => FreezePen(new Pen(Theme.ChartCursor, 1));
     private static readonly Typeface Face = new("Segoe UI");
     private double? _hoverX;
     private readonly ToolTip _tip = new() { Placement = System.Windows.Controls.Primitives.PlacementMode.Mouse };
