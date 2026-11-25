@@ -19,7 +19,7 @@ public sealed class IdentityCollector
     private static readonly string[] Lead =
     {
         "E-mail registrado no Netskope", "Login no sistema operacional", "Último logon na máquina", "Forma de registro",
-        "Hostname", "Fabricante", "Modelo", "Número de série", "Sistema", "Distribuição",
+        "Hostname", "Fabricante", "Modelo", "Número de série", "Sistema",
         "Tenant", "Versão do cliente", "Cliente instalado em",
     };
 
@@ -29,6 +29,8 @@ public sealed class IdentityCollector
     private readonly HashSet<string> _emailSources = new();
     private long? _lastLogon, _installTs, _caTs;
     private bool _idp, _secureEnroll;
+    private DateTime? _npaEnroll;
+    private string? _distro;
 
     private static readonly Regex EmailRe = new(@"[A-Za-z0-9._%+*-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+", RegexOptions.CultureInvariant);
     private static readonly Regex ConfigEmailRe = new(@"user[Ee]mail[ =:]+([^\s,\]\[]+@[^\s,\]\[]+)", RegexOptions.CultureInvariant);
@@ -108,7 +110,7 @@ public sealed class IdentityCollector
             }, src);
         }
         Set(Machine, "Arquitetura", Regex.Match(t, @"Kernel arch:\s*(\S+)").Groups[1].Value, src);
-        Set(Netskope, "Instalação registrada", Regex.Match(t, @"^Time:\s*(.+)$", RegexOptions.Multiline).Groups[1].Value, src);
+        Set(Netskope, "Instalação no install.log", Regex.Match(t, @"^Time:\s*(.+)$", RegexOptions.Multiline).Groups[1].Value, src);
         Email(Regex.Match(t, @"(?i)e-?mail[^:\r\n]*:\s*(\S+@\S+)").Groups[1].Value, src);
     }
 
@@ -122,7 +124,8 @@ public sealed class IdentityCollector
             var ips = Regex.Matches(body, @"inet (\d+\.\d+\.\d+\.\d+/\d+)").Select(x => x.Groups[1].Value).ToList();
             if (ips.Count == 0) continue;
             var mac = Regex.Match(body, @"link/ether ([0-9a-f:]{17})").Groups[1].Value;
-            list.Add($"{name}: {string.Join(", ", ips)}" + (mac.Length > 0 ? $" · MAC {mac}" : ""));
+            var kind = name == "sta0" ? " (túnel Netskope)" : name.StartsWith("br-", StringComparison.Ordinal) || name.StartsWith("docker", StringComparison.Ordinal) ? " (Docker)" : "";
+            list.Add($"{name}{kind}: {string.Join(", ", ips)}" + (mac.Length > 0 ? $" · MAC {mac}" : ""));
         }
         if (list.Count > 0) Set(Network, "Interfaces ativas", string.Join("\n", list.Take(8)), src);
     }
@@ -180,9 +183,15 @@ public sealed class IdentityCollector
     }
 
     /// <summary>Linhas de log: só as que carregam identidade (filtro barato antes de qualquer regex).</summary>
-    public void OnLine(string msg, string file)
+    public void OnLine(DateTime time, string msg, string file)
     {
         if (msg.Length > 16384) return;
+        if (msg.Contains('@') && (msg.Contains("user", StringComparison.OrdinalIgnoreCase) || msg.Contains("email", StringComparison.OrdinalIgnoreCase))
+            && !msg.Contains("seremail", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (Match m in EmailRe.Matches(msg)) if (!m.Value.Contains("goskope.com", StringComparison.OrdinalIgnoreCase)) Email(m.Value, file);
+        }
+        if (msg.Contains("Attempting NPA enrollment", StringComparison.Ordinal)) _npaEnroll = time;
         if (msg.Contains("seremail", StringComparison.OrdinalIgnoreCase) || msg.Contains("userEmail", StringComparison.Ordinal))
         {
             var m = ConfigEmailRe.Match(msg);
@@ -213,7 +222,7 @@ public sealed class IdentityCollector
                 Email(S(a, "user_email"), file);
                 Set(Machine, "Hostname", S(a, "machine_name"), file);
                 var distro = S(a, "os_distro");
-                if (distro is { Length: > 0 }) Set(Machine, "Distribuição", distro, file);
+                if (distro is { Length: > 0 }) _distro = distro;
                 Set(Machine, "Disco principal criptografado", YesNo(S(a, "primary_storage_encrypted")), file, overwrite: true);
                 Set(Machine, "Gerenciado (marcado no console)", YesNo(S(a, "managed")), file, overwrite: true);
                 Set(User, "Modo por usuário (várias sessões)", YesNo(S(a, "perusermode")), file, overwrite: true);
@@ -260,7 +269,9 @@ public sealed class IdentityCollector
             Set(Machine, "Fabricante", S(c, "cache", "device", "make"), "nsconfig.json");
             Set(Machine, "Modelo", S(c, "cache", "device", "model"), "nsconfig.json");
             Set(Machine, "Número de série", S(c, "cache", "device", "serial_num"), "nsconfig.json");
-            var os = $"{S(c, "cache", "device", "os")} {S(c, "cache", "device", "os_version")}".Trim();
+            var osName = S(c, "cache", "device", "os");
+            if (_distro is { Length: > 0 } && osName is "Linux") osName = char.ToUpperInvariant(_distro[0]) + _distro[1..] + " (Linux)";
+            var os = $"{osName} {S(c, "cache", "device", "os_version")}".Trim();
             Set(Machine, "Sistema", os, "nsconfig.json");
             Set(Netskope, "Versão do cliente", S(c, "cache", "device", "ns_version"), "nsconfig.json");
             if (long.TryParse(S(c, "cache", "appinstalltimestamp"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var it) && it > 1_000_000_000) _installTs = it;
@@ -299,6 +310,7 @@ public sealed class IdentityCollector
         else if (_idp) Set(User, "Autenticação IdP", "janela de login do IdP usada pelo cliente", "nsAppUI.log");
         if (_secureEnroll) Set(User, "Registro seguro (secure enrollment)", "ativo", "nsAppUI.log");
         if (_lastLogon is long ll) Set(User, "Último logon na máquina", When(ll), "npadebuglog.log");
+        if (_npaEnroll is DateTime ne) Set(User, "Registro no Private Access", ne.ToString("dd/MM/yyyy HH:mm", CultureInfo.InvariantCulture), "nsdebuglog.log");
         if (_installTs is long its) Set(Netskope, "Cliente instalado em", When(its), "nsconfig.json");
         if (_caTs is long cts) Set(Netskope, "Certificado (CA) instalado em", When(cts), "appstatus");
 

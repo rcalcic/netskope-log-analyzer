@@ -379,7 +379,7 @@ public sealed class Analyzer
             var entry = new LogEntry(fi, time, level, line, msg, src);
             _r.Entries.Add(entry);
             CollectEvents(entry, file.BaseName);
-            _id.OnLine(msg, file.BaseName);
+            _id.OnLine(time, msg, file.BaseName);
             Classify(entry, file);
         }
     }
