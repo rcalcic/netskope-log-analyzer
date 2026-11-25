@@ -355,7 +355,7 @@ public static class FocusAnalyzer
         return s.Length > 253 ? s[..253] : s;
     }
 
-    internal static bool PatternMatches(string pattern, string domain)
+    public static bool PatternMatches(string pattern, string domain)
     {
         var p = pattern.Trim().ToLowerInvariant().TrimEnd('.');
         if (p.Length == 0) return false;

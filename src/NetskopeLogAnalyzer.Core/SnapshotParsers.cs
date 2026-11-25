@@ -93,7 +93,7 @@ public static class SnapshotParsers
     }
 
     /// <summary>Coluna TIME do ps: "MMM:SS" (aux) ou "[DD-]HH:MM:SS".</summary>
-    internal static double CpuTime(string v)
+    public static double CpuTime(string v)
     {
         var days = 0;
         var dash = v.IndexOf('-');
