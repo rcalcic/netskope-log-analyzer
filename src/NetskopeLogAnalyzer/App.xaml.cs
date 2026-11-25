@@ -29,6 +29,10 @@ public partial class App : Application
         var window = new MainWindow();
         MainWindow = window;
         window.Show();
+        string? Arg(string name) => e.Args.FirstOrDefault(a => a.StartsWith(name, StringComparison.OrdinalIgnoreCase))?[name.Length..];
+        var sint = Arg("--sintomas=");
+        if (sint != null || Arg("--site=") != null || Arg("--horario=") != null)
+            window.PresetFocus((sint ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries), Arg("--site="), Arg("--horario="));
         // "Abrir com" no Explorador ou arquivo arrastado sobre o ícone
         var files = e.Args.Where(a => !a.StartsWith("--", StringComparison.Ordinal)).ToArray();
         if (files.Length > 0) window.LoadFiles(files);

@@ -68,6 +68,15 @@ public partial class MainWindow
         return d;
     }
 
+    /// <summary>Pré-preenche o relato (argumentos --sintomas=, --site=, --horario=).</summary>
+    public void PresetFocus(IEnumerable<string> symptoms, string? site, string? time)
+    {
+        var set = new HashSet<string>(symptoms.Select(x => x.Trim().ToLowerInvariant()));
+        foreach (var c in _startChips) c.IsChecked = set.Contains((string)c.Tag);
+        if (!string.IsNullOrWhiteSpace(site)) InDomain.Text = site.Trim();
+        if (!string.IsNullOrWhiteSpace(time)) InTime.Text = time.Trim();
+    }
+
     private AnalysisOptions BuildOptions()
     {
         var o = new AnalysisOptions();

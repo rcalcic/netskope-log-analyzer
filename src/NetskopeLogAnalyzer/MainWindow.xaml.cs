@@ -130,6 +130,12 @@ public partial class MainWindow : Window
                 TxtProgress.Text = "Nenhum log do Netskope reconhecido nesses arquivos.";
                 return;
             }
+            // horário sem data completa: interpreta no dia em que os logs terminam, não no dia de hoje
+            if (options.ProblemTime is not null && result.End is DateTime end && !System.Text.RegularExpressions.Regex.IsMatch(InTime.Text, @"\d{1,2}/\d{1,2}/\d{2,4}"))
+            {
+                options.ProblemTime = ParseProblemTime(InTime.Text, end);
+                NetskopeLogAnalyzer.Core.FocusAnalyzer.Run(result, options);
+            }
             _result = result;
             TxtFileName.Text = paths.Length <= 2 ? string.Join(", ", paths.Select(p => IOPath.GetFileName(p.TrimEnd('\\', '/')))) : $"{paths.Length} arquivos" + (result.HasTelemetry ? " (com telemetria)" : "");
             TxtProgress.Text = "";

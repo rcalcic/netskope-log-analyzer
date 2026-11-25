@@ -151,7 +151,8 @@ public static class FocusAnalyzer
         if (fs.Count == 0) return new(name, Ok, okText);
         var worst = fs[0].Severity;
         var st = worst == Severity.Critical ? Prob : worst == Severity.Warning ? Warn : Ok;
-        return new(name, st, string.Join(" · ", fs.Take(3).Select(f => f.Title + (f.First is DateTime a ? $" ({Report.Time(a)})" : ""))));
+        var prefix = st == Ok ? "Informativo, não indica falha: " : "";
+        return new(name, st, prefix + string.Join(" · ", fs.Take(3).Select(f => f.Title + (f.First is DateTime a ? $" ({Report.Time(a)})" : ""))));
     }
 
     private static FocusCheck? FromPerf(AnalysisResult r, string name, Func<PerfMetric, bool> pred)

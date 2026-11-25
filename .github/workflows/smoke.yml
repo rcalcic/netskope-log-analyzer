@@ -1,8 +1,8 @@
 name: Teste de fumaça da interface (Windows)
 
-# 1) roda o coletor de telemetria sem janela e valida o JSONL;
-# 2) abre o app só com a telemetria real coletada;
-# 3) abre o app com logs + telemetria sintéticos e captura todas as abas.
+# 0) tela inicial (claro e escuro com sintomas marcados);
+# A) pacote só de logs, tema claro, com relato do usuário (sintomas, site e horário);
+# B) logs + telemetria JSONL sintéticos, tema escuro; captura todas as abas.
 on:
   workflow_dispatch:
   pull_request:
@@ -33,8 +33,8 @@ jobs:
             $g = [System.Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
             $bmp.Save("smoke/$name.png"); $g.Dispose(); $bmp.Dispose()
           }
-          function Capture($prefix, [string[]]$files) {
-            $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList ($files | ForEach-Object { '"' + (Resolve-Path $_).Path + '"' }) -PassThru
+          function Capture($prefix, [string[]]$files, [string[]]$extra = @()) {
+            $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList (@($extra) + ($files | ForEach-Object { '"' + (Resolve-Path $_).Path + '"' })) -PassThru
             Start-Sleep 18
             if ($p.HasExited) { throw "[$prefix] o app fechou sozinho (código $($p.ExitCode))" }
             $root = [System.Windows.Automation.AutomationElement]::RootElement
@@ -67,6 +67,13 @@ jobs:
           Shot '0-inicio'
           Stop-Process -Id $p0.Id; Start-Sleep 2
 
+          # 0b) tela inicial no tema escuro, com sintomas marcados
+          $p0 = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList '--theme=escuro', '--sintomas=npa,lentidao,dns', '--site=teams.microsoft.com', '--horario=09:00' -PassThru
+          Start-Sleep 12
+          if ($p0.HasExited) { throw '[0b] o app fechou sozinho' }
+          Shot '0b-inicio-escuro'
+          Stop-Process -Id $p0.Id; Start-Sleep 2
+
           # A) pacote só de logs (como o usuário envia): Private Access com queda por keepalive, reautenticação e mudanças de rede
           $pa = New-Item -ItemType Directory -Force smoke/pkgA
           $N = { param($t, $lvl, $msg) "[PC-A:2026-11-23 $t.000 -03:00] t1 [$lvl] f.cpp:1:f():0x0 $msg" }
@@ -93,7 +100,7 @@ jobs:
           Set-Content smoke/pkgA/nsdebuglog.log ($svc | Sort-Object)
           Set-Content smoke/pkgA/nsconfig.json '{"cache":{"lastClientConfigVersion":"2026-11-23 07:00:00"},"clientConfig":{"configurationName":"Default","allowClientDisabling":true,"pdem_subscription_level":"None"}}'
           Compress-Archive smoke/pkgA/* smoke/pacote-logs.zip
-          Capture 'A' @('smoke/pacote-logs.zip')
+          Capture 'A' @('smoke/pacote-logs.zip') @('--theme=claro', '--sintomas=npa,lentidao,url', '--site=teams.microsoft.com', '--horario=09:00')
 
           # B) logs sintéticos + telemetria (formato JSON Lines, ainda suportado na importação) (queda de Wi-Fi às 10:09:30 seguida de timeouts)
           $pkg = New-Item -ItemType Directory -Force smoke/pkg
@@ -136,7 +143,7 @@ jobs:
           $tel.Add('{"t":"2026-11-23T10:05:00-03:00","k":"trace","target":"gateway-acme.goskope.com","hops":[{"ttl":1,"ip":"192.168.0.1","rtt":2},{"ttl":2,"ip":"200.200.1.1","rtt":8},{"ttl":3,"ip":"163.116.224.49","rtt":12}]}')
           Set-Content smoke/pkg/nla-telemetry-PC-SINTETICO-20261123.jsonl $tel
           Compress-Archive smoke/pkg/* smoke/pacote-sintetico.zip
-          Capture 'B' @('smoke/pacote-sintetico.zip')
+          Capture 'B' @('smoke/pacote-sintetico.zip') @('--theme=escuro', '--sintomas=semnav,maquina,wifi')
 
       - uses: actions/upload-artifact@v4
         if: always()
