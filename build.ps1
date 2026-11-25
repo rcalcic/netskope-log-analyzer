@@ -33,9 +33,6 @@ $exe = Join-Path $publish 'NetskopeLogAnalyzer.exe'
 # Portatil
 Compress-Archive -Path $exe -DestinationPath (Join-Path $dist "NetskopeLogAnalyzer-$Version-portatil.zip")
 
-# Coletor para Linux/macOS
-Copy-Item (Join-Path $root 'collector\nla-collect.sh') (Join-Path $dist 'nla-collect.sh')
-
 # Setup.exe (Inno Setup 6)
 $iscc = @(
   "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",

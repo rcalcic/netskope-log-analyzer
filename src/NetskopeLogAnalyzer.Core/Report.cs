@@ -33,8 +33,9 @@ public static class Report
         sb.AppendLine($"Resultado: {Verdict(r)} ({r.Count(Severity.Critical)} crítico(s), {r.Count(Severity.Warning)} de atenção, {r.Count(Severity.Info)} informativo(s), {r.Count(Severity.Noise)} ruído(s) conhecido(s)).");
         if (r.Score is double sc) sb.AppendLine($"Experience Score: {sc:0}/100 ({ExperienceScore.Band(sc)}) em {r.Scores.Count} janelas de 5 min.");
         foreach (var (svc, av) in r.Availability) sb.AppendLine($"Disponibilidade {svc}: {av:0.#}% do tempo conectado.");
-        if (!r.HasTelemetry) sb.AppendLine("Observação: sem telemetria do coletor (CPU, memória, disco e Wi-Fi contínuos não disponíveis).");
+        if (!r.HasTelemetry) sb.AppendLine("Observação: o pacote de logs não traz séries contínuas de CPU, memória, disco e Wi-Fi (só a foto do momento da coleta).");
         if (r.ScoreMissing != null) sb.AppendLine($"Score parcial: sem dados de {r.ScoreMissing}.");
+        if (r.LogUtcOffset is TimeSpan tzo) sb.AppendLine($"Horários no fuso da máquina do usuário (UTC{(tzo < TimeSpan.Zero ? "−" : "+")}{tzo.Duration():hh\\:mm}).");
         sb.AppendLine();
 
         if (r.CaseSummary.Count > 0)

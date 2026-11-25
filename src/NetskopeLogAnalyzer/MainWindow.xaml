@@ -13,7 +13,6 @@
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
           <Button x:Name="BtnCopyReport" Content="Copiar relatório" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Visibility="Collapsed" Click="CopyReport_Click"/>
           <Button x:Name="BtnSaveReport" Content="Salvar relatório…" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Visibility="Collapsed" Click="SaveReport_Click"/>
-          <Button x:Name="BtnTelemetry" Content="Telemetria" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Telemetry_Click" ToolTip="Coletor de telemetria desta máquina, análise local e pacote de diagnóstico"/>
           <Button x:Name="BtnSettings" Content="Configurações" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Settings_Click"/>
           <Button x:Name="BtnOpen" Content="Abrir pacote…" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Open_Click"/>
         </StackPanel>
@@ -76,13 +75,13 @@
             </TextBlock>
             <Border Margin="0,22,0,0" Padding="16" CornerRadius="14" Background="{StaticResource Soft}">
               <StackPanel>
-                <TextBlock Text="Telemetria e análise desta máquina" FontWeight="Bold" FontSize="16"/>
-                <TextBlock x:Name="TxtCollectorStatus" Foreground="{StaticResource Mute}" Margin="0,4,0,10" TextWrapping="Wrap"/>
-                <WrapPanel>
-                  <Button Content="Analisar esta máquina agora" Style="{StaticResource PillDark}" Margin="0,0,8,8" Click="AnalyzeThisMachine_Click"
-                          ToolTip="Coleta os logs do Netskope Client desta máquina (nsdiag) e junta com a telemetria do coletor"/>
-                  <Button Content="Coletor de telemetria…" Style="{StaticResource Pill}" Margin="0,0,8,8" Click="Telemetry_Click"/>
-                </WrapPanel>
+                <TextBlock Text="Como pedir os logs ao usuário" FontWeight="Bold" FontSize="16"/>
+                <TextBlock Foreground="{StaticResource Mute}" Margin="0,4,0,8" TextWrapping="Wrap">
+                  Peça para salvar o pacote logo depois do problema (os logs giram por tamanho) e informar o horário aproximado em que aconteceu.
+                </TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,4"><Run FontWeight="SemiBold" Text="Windows / macOS: "/><Run Text="ícone do Netskope na bandeja (barra de menus no Mac) › Save logs. O .zip vai para a Área de Trabalho."/></TextBlock>
+                <TextBlock TextWrapping="Wrap" Margin="0,0,0,4"><Run FontWeight="SemiBold" Text="Linux: "/><Run Text="no terminal: "/><Run FontFamily="Consolas" Text="/opt/netskope/stagent/nsdiag -o ~/NetskopeLogs.zip"/></TextBlock>
+                <TextBlock TextWrapping="Wrap"><Run FontWeight="SemiBold" Text="Windows (linha de comando): "/><Run FontFamily="Consolas" Text="&quot;C:\Program Files (x86)\Netskope\STAgent\nsdiag.exe&quot; -o %USERPROFILE%\Desktop\NetskopeLogs.zip"/></TextBlock>
               </StackPanel>
             </Border>
           </StackPanel>

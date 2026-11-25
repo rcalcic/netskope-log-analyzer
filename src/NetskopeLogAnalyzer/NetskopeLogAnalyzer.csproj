@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <Resource Include="..\..\assets\icon-256.png" Link="icon.png" />
-    <EmbeddedResource Include="..\..\collector\nla-collect.sh" LogicalName="nla-collect.sh" />
   </ItemGroup>
 
 </Project>

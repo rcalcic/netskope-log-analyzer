@@ -24,17 +24,11 @@ public partial class MainWindow
 
     private AppSettings _settings = AppSettings.Load();
     private UpdateInfo? _update;
-    private readonly DispatcherTimer _collectorTimer = new() { Interval = TimeSpan.FromSeconds(5) };
 
     // ================================================================= inicialização v3
 
     private void InitV3()
     {
-        _collectorTimer.Tick += (_, _) => RefreshCollectorStatus();
-        _collectorTimer.Start();
-        RefreshCollectorStatus();
-        if (!AppSettings.CollectorDisabledByPolicy && TelemetryCollector.AutoStartEnabled && !TelemetryCollector.IsRunning())
-            Try(TelemetryCollector.StartBackground);
         Loaded += async (_, _) =>
         {
             if (_settings.AutoCheckUpdates && !AppSettings.UpdatesDisabledByPolicy && (_settings.LastUpdateCheck is null || DateTime.Now - _settings.LastUpdateCheck > TimeSpan.FromHours(12)))
@@ -43,18 +37,6 @@ public partial class MainWindow
     }
 
     private static void Try(Action a) { try { a(); } catch (Exception) { } }
-
-    private void RefreshCollectorStatus()
-    {
-        if (AppSettings.CollectorDisabledByPolicy) { TxtCollectorStatus.Text = "O coletor de telemetria foi desativado pela política do TI."; return; }
-        var files = TelemetryCollector.LocalTelemetryFiles().ToList();
-        var running = TelemetryCollector.IsRunning();
-        var size = files.Sum(f => new FileInfo(f).Length);
-        TxtCollectorStatus.Text = (running ? "Coletor em execução" : "Coletor parado") +
-            (TelemetryCollector.AutoStartEnabled ? " · coleta contínua no logon ativada" : "") +
-            (files.Count > 0 ? $" · {files.Count} dia(s) de telemetria ({size / 1048576.0:0.0} MB), última amostra {File.GetLastWriteTime(files[^1]):dd/MM HH:mm}" : " · nenhuma telemetria coletada ainda") +
-            ". Com telemetria, o app mede CPU, memória, disco, Wi-Fi, latência, perda, DNS e aplicações continuamente — como o DEM.";
-    }
 
     // ================================================================= helpers de layout
 
@@ -190,7 +172,7 @@ public partial class MainWindow
             Tile(c.Category, "Causa raiz principal: " + c.Title.ToLowerInvariant() + $" ({c.Confidence:0}%)", Ink, $"{main.Title} em {Tm(main.Start)}", TabIncidents);
         if (!r.HasTelemetry)
         {
-            var note = Notice("Sem telemetria do coletor: CPU, memória, disco e Wi-Fi contínuos não estão no pacote da Netskope. Use “Telemetria” para coletar e obter baseline e causa raiz completos.", AmberText, AmberBg);
+            var note = Notice("O pacote de logs traz só fotos pontuais de CPU, memória, disco e Wi-Fi (do momento em que foi salvo). Desempenho e causa raiz usam os sinais registrados pelo próprio Netskope Client — veja a aba Desempenho.", AmberText, AmberBg);
             var sp = new StackPanel(); sp.Children.Add(wrap); sp.Children.Add(note);
             return sp;
         }
@@ -206,7 +188,7 @@ public partial class MainWindow
         p.Children.Clear();
         p.Children.Add(T("Incidentes e causa raiz", 24, FontWeights.Bold));
         p.Children.Add(Sub("Cada incidente traz o horário, o impacto, a causa raiz mais provável (com grau de confiança) e as evidências que levaram a ela. As causas são avaliadas nos 5 minutos anteriores ao início: Wi-Fi, troca de rede, latência/perda, DNS, recursos do dispositivo, suspensão, reinício do serviço, ação do usuário e bloqueio do tenant."));
-        if (!r.HasTelemetry) p.Children.Add(Notice("Sem telemetria do coletor, a causa raiz se baseia apenas nos logs da Netskope (confiança menor para Wi-Fi, dispositivo e rede local).", AmberText, AmberBg));
+        if (!r.HasTelemetry) p.Children.Add(Notice("A causa raiz se baseia nos logs do Netskope Client: a confiança é menor para Wi-Fi e recursos da máquina, que o pacote registra só no momento da coleta.", AmberText, AmberBg));
         if (r.Incidents.Count == 0) { p.Children.Add(Notice("Nenhum incidente detectado no período analisado.", Green, GreenBg)); TabIncidents.Header = "Incidentes (0)"; return; }
         TabIncidents.Header = $"Incidentes ({r.Incidents.Count})";
         foreach (var inc in r.Incidents.OrderBy(i => i.Start)) p.Children.Add(IncidentCard(inc));
@@ -287,7 +269,7 @@ public partial class MainWindow
         p.Children.Add(Sub("Nota de 0 a 100 a cada 5 minutos, no modelo do Netskope DEM: Dispositivo (CPU, memória, disco, Wi-Fi), Rede (latência, perda, jitter, DNS e latência até o POP), Netskope (túnel conectado e falhas com o tenant) e Aplicação (testes HTTP). Componentes sem dados ficam de fora; o pior componente limita a nota. Faixas: 0–30 ruim, 31–70 regular, 71–100 bom."));
         if (r.Scores.Count == 0) { p.Children.Add(Notice("Não há dados suficientes para calcular o score.", AmberText, AmberBg)); return; }
         if (r.ScoreMissing != null)
-            p.Children.Add(Notice($"Score parcial: sem dados de {r.ScoreMissing}. A nota usa só os componentes medidos" + (r.HasTelemetry ? "." : " — rode o coletor na máquina para incluir CPU, memória, Wi-Fi e testes de aplicação."), AmberText, AmberBg));
+            p.Children.Add(Notice($"Score parcial: sem dados de {r.ScoreMissing}. A nota usa só os componentes medidos" + (r.HasTelemetry ? "." : " — o pacote de logs não mede CPU, memória, Wi-Fi nem testes de aplicação continuamente."), AmberText, AmberBg));
         var sc = r.Score ?? 0;
         var color = sc <= 30 ? Red : sc <= 70 ? AmberText : Green;
 
@@ -355,10 +337,7 @@ public partial class MainWindow
         p.Children.Add(Sub("Baseline de consumo da máquina (CPU, memória, disco, bateria e Wi-Fi) com picos, percentis e tempo acima dos limites. Faixas coloridas nos gráficos marcam os incidentes."));
         if (!r.HasTelemetry)
         {
-            p.Children.Add(Notice("O pacote de logs da Netskope não traz séries contínuas de CPU, memória, disco e Wi-Fi. Os dados abaixo são fotos instantâneas do momento da coleta. Para um baseline completo, rode o coletor de telemetria nesta máquina (ou o script para Linux/macOS) e analise de novo junto com o pacote.", AmberText, AmberBg));
-            var b = new Button { Content = "Abrir coletor de telemetria", Style = (Style)FindResource("Small"), HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 10) };
-            b.Click += Telemetry_Click;
-            p.Children.Add(b);
+            p.Children.Add(Notice("O pacote de logs não traz séries contínuas de CPU, memória, disco e Wi-Fi: os dados abaixo são fotos do momento em que o usuário salvou os logs. Os sinais de desempenho ao longo do tempo (atrasos, suspensões, travamentos) estão na aba Desempenho.", AmberText, AmberBg));
         }
 
         var info = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
@@ -420,7 +399,7 @@ public partial class MainWindow
         var p = NetworkPanel;
         p.Children.Clear();
         p.Children.Add(T("Rede e Netskope", 24, FontWeights.Bold));
-        p.Children.Add(Sub("Disponibilidade do túnel, latência até os POPs (medida pelo próprio Netskope Client na seleção de gateway), caminho até o POP, IP de saída, DNS e testes de rede do coletor."));
+        p.Children.Add(Sub("Disponibilidade do túnel, latência até os POPs (medida pelo próprio Netskope Client na seleção de gateway), sessões do Private Access, IP de saída, DNS e capturas de pacotes do pacote de logs."));
 
         if (r.Availability.Count > 0 || r.States.Count > 0)
         {
@@ -442,7 +421,7 @@ public partial class MainWindow
         void Chart(string title, string? sub, params string[] keys) { var s = SeriesStarting(keys).ToList(); if (s.Count > 0) p.Children.Add(ChartBlock(title, s, sub)); }
         Chart("Latência até o melhor POP", "Menor latência em cada rodada de medição do GSLB.", "pop.best");
         Chart("Latência por POP", null, "pop.rtt");
-        Chart("Latência (ping)", "Gateway local e Internet, medidos pelo coletor.", "ping.rtt");
+        Chart("Latência (ping)", "Gateway local e Internet.", "ping.rtt");
         Chart("Perda de pacotes", null, "ping.loss");
         Chart("Jitter", null, "ping.jitter");
         Chart("Conexão TCP até os POPs", "Tempo para abrir conexão TCP 443 até os gateways Netskope.", "tcp.connect");
@@ -486,7 +465,7 @@ public partial class MainWindow
         var p = AppsPanel;
         p.Children.Clear();
         p.Children.Add(T("Aplicações e tráfego", 24, FontWeights.Bold));
-        p.Children.Add(Sub("Testes sintéticos de aplicação do coletor (tempo por fase: DNS, TCP, TLS e 1º byte) e o tráfego que o Netskope Client registrou por processo e destino: tunelado para inspeção, em bypass (exceções) e UDP/QUIC bloqueado."));
+        p.Children.Add(Sub("O tráfego que o Netskope Client registrou por processo e destino: tunelado para inspeção, em bypass (exceções) e UDP/QUIC bloqueado."));
 
         var probes = SeriesStarting("http.ttfb").ToList();
         if (probes.Count > 0)
@@ -504,7 +483,6 @@ public partial class MainWindow
                 }), new double[] { 0, 80, 80, 80, 90, 90, 90, 70 }));
             p.Children.Add(Sub("Valores = mediana por fase."));
         }
-        else p.Children.Add(Notice("Sem testes de aplicação: o coletor de telemetria mede DNS, TCP, TLS e tempo até o 1º byte das URLs configuradas.", AmberText, AmberBg));
 
         var flows = SeriesStarting("flows.tunnel", "flows.bypass", "flows.udpblock").ToList();
         if (flows.Count > 0) p.Children.Add(ChartBlock("Tráfego registrado pelo Netskope Client", flows));
@@ -527,99 +505,6 @@ public partial class MainWindow
         p.Children.Add(BaselineTable(MetricCatalog.Apps));
     }
 
-    // ================================================================= análise desta máquina
-
-    private async void AnalyzeThisMachine_Click(object sender, RoutedEventArgs e)
-    {
-        DropView.Visibility = Visibility.Visible; Tabs.Visibility = Visibility.Collapsed;
-        Busy.Visibility = Visibility.Visible;
-        var progress = new Progress<string>(s => TxtProgress.Text = s);
-        var paths = new List<string>();
-        try
-        {
-            var zip = await DiagnosticsPackager.SaveNetskopeLogsAsync(Path.Combine(Path.GetTempPath(), "NetskopeLogAnalyzer"), progress, CancellationToken.None);
-            if (zip != null) paths.Add(zip);
-        }
-        catch (Exception ex) { TxtProgress.Text = "Não foi possível coletar os logs do Netskope: " + ex.Message; }
-        paths.AddRange(TelemetryCollector.LocalTelemetryFiles(7));
-        Busy.Visibility = Visibility.Collapsed;
-        if (paths.Count == 0)
-        {
-            TxtProgress.Text = "Netskope Client não encontrado nesta máquina e ainda não há telemetria. Inicie o coletor em “Telemetria”.";
-            return;
-        }
-        LoadFiles(paths.ToArray());
-    }
-
-    // ================================================================= janela de Telemetria
-
-    private void Telemetry_Click(object sender, RoutedEventArgs e)
-    {
-        var w = new Window { Title = "Telemetria desta máquina", Owner = this, Width = 640, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize, Background = White, FontFamily = FontFamily, FontSize = 14 };
-        var sp = new StackPanel { Margin = new Thickness(22) };
-        sp.Children.Add(T("Coletor de telemetria", 22, FontWeights.Bold));
-        sp.Children.Add(T("Funciona como o agente do Netskope DEM, sem licença: grava a cada 30 s CPU, memória, disco, bateria, Wi-Fi (sinal, RSSI, taxa, troca de AP), tráfego e processos; a cada minuto ping/perda/jitter, conexão TCP até os POPs, DNS e testes HTTP por fase; e um traceroute até o POP a cada 15 min. Os dados ficam só nesta máquina (" + AppSettings.TelemetryDir + ").", 13.5, fg: Mute, margin: new Thickness(0, 6, 0, 12)));
-        var status = T("", 14, FontWeights.SemiBold);
-        sp.Children.Add(status);
-        if (AppSettings.CollectorDisabledByPolicy) sp.Children.Add(Notice("O coletor foi desativado pela política do TI (DisableCollector).", AmberText, AmberBg));
-
-        var btns = new WrapPanel { Margin = new Thickness(0, 12, 0, 0) };
-        Button Btn(string text, string style, RoutedEventHandler h) { var b = new Button { Content = text, Style = (Style)FindResource(style), Margin = new Thickness(0, 0, 8, 8) }; b.Click += h; btns.Children.Add(b); return b; }
-        var start = Btn("Iniciar coleta", "PillDark", (_, _) => { Try(TelemetryCollector.StartBackground); });
-        var stop = Btn("Parar coleta", "Pill", (_, _) => { Try(TelemetryCollector.StopBackground); });
-        Btn("Abrir pasta", "Pill", (_, _) => { Directory.CreateDirectory(AppSettings.TelemetryDir); Process.Start(new ProcessStartInfo("explorer.exe", $"\"{AppSettings.TelemetryDir}\"") { UseShellExecute = true }); });
-        sp.Children.Add(btns);
-        var auto = new CheckBox { Content = "Coleta contínua: iniciar o coletor automaticamente no logon", IsChecked = TelemetryCollector.AutoStartEnabled, Margin = new Thickness(0, 4, 0, 12), IsEnabled = !AppSettings.CollectorDisabledByPolicy };
-        auto.Checked += (_, _) => { Try(() => TelemetryCollector.AutoStartEnabled = true); Try(TelemetryCollector.StartBackground); };
-        auto.Unchecked += (_, _) => Try(() => TelemetryCollector.AutoStartEnabled = false);
-        sp.Children.Add(auto);
-
-        sp.Children.Add(T("Diagnóstico", 16, FontWeights.Bold, margin: new Thickness(0, 6, 0, 6)));
-        var b2 = new WrapPanel();
-        void Btn2(string text, string style, RoutedEventHandler h) { var b = new Button { Content = text, Style = (Style)FindResource(style), Margin = new Thickness(0, 0, 8, 8) }; b.Click += h; b2.Children.Add(b); }
-        Btn2("Analisar esta máquina agora", "PillDark", (s, a) => { w.Close(); AnalyzeThisMachine_Click(s, a); });
-        Btn2("Exportar pacote de diagnóstico…", "Pill", async (_, _) =>
-        {
-            var dlg = new SaveFileDialog { Title = "Salvar pacote de diagnóstico", FileName = $"NLA-diagnostico-{Environment.MachineName}-{DateTime.Now:yyyyMMdd-HHmm}.zip", Filter = "Zip (*.zip)|*.zip" };
-            if (dlg.ShowDialog(w) != true) return;
-            status.Text = "Gerando o pacote…";
-            try
-            {
-                await DiagnosticsPackager.ExportAsync(dlg.FileName, 14, new Progress<string>(s => status.Text = s), CancellationToken.None);
-                status.Text = "Pacote salvo em " + dlg.FileName;
-            }
-            catch (Exception ex) { status.Text = "Falha ao gerar o pacote: " + ex.Message; }
-        });
-        Btn2("Salvar coletor para Linux/macOS…", "Pill", (_, _) =>
-        {
-            var dlg = new SaveFileDialog { Title = "Salvar coletor para Linux/macOS", FileName = "nla-collect.sh", Filter = "Script (*.sh)|*.sh" };
-            if (dlg.ShowDialog(w) != true) return;
-            using var res = typeof(MainWindow).Assembly.GetManifestResourceStream("nla-collect.sh");
-            if (res is null) { status.Text = "Script não encontrado no aplicativo."; return; }
-            using (var f = File.Create(dlg.FileName)) res.CopyTo(f);
-            status.Text = "Script salvo. No Linux/macOS: chmod +x nla-collect.sh && ./nla-collect.sh -t <tenant>  (ou --install para coleta contínua).";
-        });
-        sp.Children.Add(b2);
-        sp.Children.Add(T("Para analisar outra máquina: rode o coletor nela (este app com “Coleta contínua”, ou o script no Linux/macOS), gere o pacote de logs do Netskope e abra os dois arquivos juntos aqui.", 12.5, fg: Mute, margin: new Thickness(0, 8, 0, 0)));
-
-        void Refresh()
-        {
-            var running = TelemetryCollector.IsRunning();
-            var files = TelemetryCollector.LocalTelemetryFiles().ToList();
-            status.Text = (running ? "● Coletando agora" : "○ Coletor parado") + (files.Count > 0 ? $" · {files.Count} arquivo(s), último atualizado em {File.GetLastWriteTime(files[^1]):dd/MM HH:mm:ss}" : " · nenhum dado ainda");
-            status.Foreground = running ? Green : Mute;
-            start.IsEnabled = !running && !AppSettings.CollectorDisabledByPolicy;
-            stop.IsEnabled = running;
-        }
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        timer.Tick += (_, _) => Refresh();
-        timer.Start();
-        w.Closed += (_, _) => { timer.Stop(); RefreshCollectorStatus(); };
-        Refresh();
-        w.Content = sp;
-        w.ShowDialog();
-    }
-
     // ================================================================= Configurações
 
     private void Settings_Click(object sender, RoutedEventArgs e)
@@ -627,23 +512,7 @@ public partial class MainWindow
         var w = new Window { Title = "Configurações", Owner = this, Width = 600, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize, Background = White, FontFamily = FontFamily, FontSize = 14 };
         var sp = new StackPanel { Margin = new Thickness(22) };
         sp.Children.Add(T("Configurações", 22, FontWeights.Bold, margin: new Thickness(0, 0, 0, 12)));
-        TextBox Field(string label, string value, bool multi = false, string? hint = null)
-        {
-            sp.Children.Add(T(label, 13, FontWeights.SemiBold, margin: new Thickness(0, 8, 0, 4)));
-            var tb = new TextBox { Text = value, Padding = new Thickness(6, 4, 6, 4), AcceptsReturn = multi, Height = multi ? 80 : double.NaN, VerticalScrollBarVisibility = multi ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled };
-            sp.Children.Add(tb);
-            if (hint != null) sp.Children.Add(T(hint, 11.5, fg: Mute));
-            return tb;
-        }
-        var policyTenant = AppSettings.PolicyTenant;
-        var tenant = Field("Tenant Netskope", policyTenant ?? _settings.Tenant ?? "", hint: policyTenant != null ? "Definido pela política do TI." : "Ex.: acme (para acme.goskope.com) ou acme.eu. Usado nos testes até o POP. Detectado automaticamente quando o Netskope Client está instalado.");
-        tenant.IsEnabled = policyTenant is null;
-        var urls = Field("URLs para testes de aplicação (uma por linha)", string.Join(Environment.NewLine, _settings.ProbeUrls), true);
-        var interval = Field("Intervalo de amostragem (segundos)", _settings.IntervalSeconds.ToString(CultureInfo.InvariantCulture));
-        var probe = Field("Intervalo dos testes de rede e aplicação (segundos)", _settings.ProbeSeconds.ToString(CultureInfo.InvariantCulture));
-        var trace = Field("Intervalo do traceroute (minutos)", _settings.TraceMinutes.ToString(CultureInfo.InvariantCulture));
-        var ret = Field("Guardar telemetria por (dias)", _settings.RetentionDays.ToString(CultureInfo.InvariantCulture));
-
+        sp.Children.Add(T("Este aplicativo só analisa pacotes de logs salvos pelos usuários. Nada é coletado nem enviado desta máquina; a única conexão é a verificação de atualização no GitHub.", 13, fg: Mute, margin: new Thickness(0, 0, 0, 8)));
         sp.Children.Add(T("Atualizações", 16, FontWeights.Bold, margin: new Thickness(0, 16, 0, 4)));
         var autoCheck = new CheckBox { Content = "Verificar atualizações automaticamente", IsChecked = _settings.AutoCheckUpdates, Margin = new Thickness(0, 4, 0, 0) };
         var autoInstall = new CheckBox { Content = "Instalar atualizações automaticamente (pede confirmação do Windows)", IsChecked = _settings.AutoInstallUpdates, Margin = new Thickness(0, 4, 0, 0) };
@@ -658,17 +527,9 @@ public partial class MainWindow
         var save = new Button { Content = "Salvar", Style = (Style)FindResource("PillDark") };
         save.Click += (_, _) =>
         {
-            static int Int(TextBox tb, int def, int min, int max) => int.TryParse(tb.Text.Trim(), out var v) ? Math.Clamp(v, min, max) : def;
-            if (policyTenant is null) _settings.Tenant = string.IsNullOrWhiteSpace(tenant.Text) ? null : tenant.Text.Trim().ToLowerInvariant().Replace(".goskope.com", "");
-            _settings.ProbeUrls = urls.Text.Split('\n').Select(u => u.Trim()).Where(u => Uri.IsWellFormedUriString(u, UriKind.Absolute)).Distinct().ToList();
-            _settings.IntervalSeconds = Int(interval, 30, 5, 3600);
-            _settings.ProbeSeconds = Int(probe, 60, 15, 3600);
-            _settings.TraceMinutes = Int(trace, 15, 1, 1440);
-            _settings.RetentionDays = Int(ret, 14, 1, 365);
             _settings.AutoCheckUpdates = autoCheck.IsChecked == true;
             _settings.AutoInstallUpdates = autoInstall.IsChecked == true;
             _settings.Save();
-            if (TelemetryCollector.IsRunning()) { Try(TelemetryCollector.StopBackground); _ = RestartCollectorSoon(); }
             w.Close();
             ShowToast("Configurações salvas.");
         };
@@ -676,12 +537,6 @@ public partial class MainWindow
         sp.Children.Add(bar);
         w.Content = new ScrollViewer { Content = sp, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = SystemParameters.WorkArea.Height * 0.9 };
         w.ShowDialog();
-    }
-
-    private static async Task RestartCollectorSoon()
-    {
-        for (var i = 0; i < 20 && TelemetryCollector.IsRunning(); i++) await Task.Delay(500);
-        Try(TelemetryCollector.StartBackground);
     }
 
     // ================================================================= atualização automática

@@ -23,21 +23,6 @@ jobs:
         shell: pwsh
         run: dotnet publish src/NetskopeLogAnalyzer/NetskopeLogAnalyzer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
 
-      - name: Coletor de telemetria (2 minutos, sem janela)
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force smoke | Out-Null
-          $p = Start-Process publish/NetskopeLogAnalyzer.exe -ArgumentList '--collect','--minutes','2','--interval','10','--tenant','acme' -PassThru
-          if (-not $p.WaitForExit(240000)) { Stop-Process -Id $p.Id -Force; throw 'O coletor não terminou no tempo esperado' }
-          $f = Get-ChildItem "$env:LOCALAPPDATA\NetskopeLogAnalyzer\telemetry\nla-telemetry-*.jsonl" | Select-Object -First 1
-          if (-not $f) { throw 'Nenhum arquivo de telemetria gerado' }
-          Copy-Item $f.FullName smoke/telemetria-real.jsonl
-          $kinds = @{}
-          foreach ($line in Get-Content $f.FullName) { $o = $line | ConvertFrom-Json; $kinds[$o.k] = 1 + [int]$kinds[$o.k] }
-          $kinds.GetEnumerator() | Sort-Object Name | ForEach-Object { "{0,-8} {1}" -f $_.Name, $_.Value } | Tee-Object smoke/telemetria-tipos.txt
-          foreach ($k in 'meta','cpu','mem','disk','net','procs','http','tcp','dns','trace') { if (-not $kinds.ContainsKey($k)) { throw "Faltou o tipo '$k' na telemetria" } }
-          Get-Content $f.FullName -TotalCount 40 | Out-File smoke/telemetria-amostra.txt
-
       - name: Abrir o app e capturar as abas
         shell: pwsh
         run: |
@@ -73,10 +58,44 @@ jobs:
             Start-Sleep 2
           }
 
-          # A) só a telemetria real coletada no runner
-          Capture 'A' @('smoke/telemetria-real.jsonl')
+          New-Item -ItemType Directory -Force smoke | Out-Null
 
-          # B) logs sintéticos + telemetria sintética (queda de Wi-Fi às 10:09:30 seguida de timeouts)
+          # 0) tela inicial (sem pacote)
+          $p0 = Start-Process publish/NetskopeLogAnalyzer.exe -PassThru
+          Start-Sleep 12
+          if ($p0.HasExited) { throw '[0] o app fechou sozinho' }
+          Shot '0-inicio'
+          Stop-Process -Id $p0.Id; Start-Sleep 2
+
+          # A) pacote só de logs (como o usuário envia): Private Access com queda por keepalive, reautenticação e mudanças de rede
+          $pa = New-Item -ItemType Directory -Force smoke/pkgA
+          $N = { param($t, $lvl, $msg) "[PC-A:2026-11-23 $t.000 -03:00] t1 [$lvl] f.cpp:1:f():0x0 $msg" }
+          $npa = @()
+          $npa += (& $N '08:00:00' 'info' 'GW FQDN = gateway.npa.goskope.com, IP = 163.116.224.49, POP = BR-SAO1, RTT = 9 ms.')
+          $npa += (& $N '08:00:01' 'info' 'Starting handler with GW gateway.npa.goskope.com (163.116.224.49:443, pop:BR-SAO1, type:GSLB, newIp:1).')
+          $npa += (& $N '08:00:02' 'info' 'TLS client established connection TLS version:TLSv1.2 server:163.116.224.49:443 cipher:X')
+          foreach ($k in 1..11) { $npa += (& $N ('{0:hh\:mm\:ss}' -f ([timespan]::FromMinutes(480 + 5 * $k))) 'info' ("NPAGW 163.116.224.49: RETRANS:{0}, RTT:{1}ms, HIST:(0,0,1)." -f (10 + $k * ($k -eq 11 ? 40 : 3)), ($k -eq 11 ? 640 : 12))) }
+          $npa += (& $N '09:00:00' 'error' 'keepAlive fails with 15 tries.')
+          $npa += (& $N '09:00:00' 'info' 'NPA Tunnel is disconnected.')
+          $npa += (& $N '09:04:00' 'info' 'NPA Client is connecting to Primary Tenant.')
+          $npa += (& $N '09:04:01' 'info' 'Starting handler with GW gateway.npa.goskope.com (163.116.228.122:443, pop:BR-GIG1, type:GSLB, newIp:1).')
+          $npa += (& $N '09:04:02' 'info' 'TLS client established connection TLS version:TLSv1.2 server:163.116.228.122:443 cipher:X')
+          $npa += (& $N '09:40:00' 'error' 'Shutdown packet received from gateway. Reason = [Active session has expired. Please Authenticate again to continue]')
+          $npa += (& $N '09:40:00' 'info' 'NPA Tunnel is disconnected.')
+          $npa += (& $N '09:41:00' 'info' 'TLS client established connection TLS version:TLSv1.2 server:163.116.228.122:443 cipher:X')
+          $npa += (& $N '10:00:00' 'info' 'Set NPA log level to 2')
+          Set-Content smoke/pkgA/npadebuglog.log $npa
+          $L = { param($t, $lvl, $src, $msg) "2026/11/23 $t.100000 stAgentSvc p1 t1 $lvl $src $msg" }
+          $svc = @((& $L '08:00:00' 'info' 'main.cpp:1' 'main ======= stAgentSvc 142.0.0.2821 starting ======'))
+          foreach ($k in 0..59) { $svc += (& $L ('{0:hh\:mm\:ss}' -f ([timespan]::FromSeconds(28800 + 60 * $k))) 'info' 'k.cpp:1' 'KernelUserShim network status changed') }
+          foreach ($k in 0..5) { $svc += (& $L ('08:59:{0:00}' -f (40 + $k * 3)) 'warn' 'nsHTTPClient.cpp:537' 'downloader curl_easy_perform failed, code 28, error Timeout was reached') }
+          $svc += (& $L '10:00:00' 'info' 'x.cpp:1' 'nsAgentSvc ======= Log collection complete =======')
+          Set-Content smoke/pkgA/nsdebuglog.log ($svc | Sort-Object)
+          Set-Content smoke/pkgA/nsconfig.json '{"cache":{"lastClientConfigVersion":"2026-11-23 07:00:00"},"clientConfig":{"configurationName":"Default","allowClientDisabling":true,"pdem_subscription_level":"None"}}'
+          Compress-Archive smoke/pkgA/* smoke/pacote-logs.zip
+          Capture 'A' @('smoke/pacote-logs.zip')
+
+          # B) logs sintéticos + telemetria (formato JSON Lines, ainda suportado na importação) (queda de Wi-Fi às 10:09:30 seguida de timeouts)
           $pkg = New-Item -ItemType Directory -Force smoke/pkg
           $L = { param($t, $lvl, $src, $msg) "2026/11/23 $t.100000 stAgentSvc p1 t1 $lvl $src $msg" }
           $lines = @(

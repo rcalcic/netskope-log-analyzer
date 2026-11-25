@@ -4,7 +4,7 @@ Aplicativo **nativo para Windows** (C#/.NET 8, WPF) que analisa o pacote de logs
 
 - **Sem navegador:** não usa Edge, Chrome, WebView2 nem nenhum motor web.
 - **Sem dependências:** um único `.exe` autocontido; não precisa nem do .NET instalado.
-- **Privado:** a análise roda inteiramente no computador. Nenhum log ou telemetria é enviado — o pacote contém token, número de série, e-mails e hostnames. As únicas conexões são a verificação de atualização no GitHub e os testes de rede do coletor (quando ligado).
+- **Privado:** a análise roda inteiramente no computador do analista. Nenhum log é enviado — o pacote contém token, número de série, e-mails e hostnames. A única conexão é a verificação de atualização no GitHub.
 
 ## O que o app mostra
 
@@ -17,7 +17,7 @@ Aplicativo **nativo para Windows** (C#/.NET 8, WPF) que analisa o pacote de logs
 | **Diagnóstico** | ~40 padrões conhecidos (Crítico, Atenção, Informativo, Ruído) com significado, **como resolver**, comandos prontos e documentação oficial. |
 | **Dispositivo** | **Baseline** de CPU, memória, disco, E/S, bateria e Wi-Fi (sinal, RSSI, taxa, canal, AP): mediana, p95, mín./máx., % do tempo acima do limite, anomalias e processos mais pesados em cada pico. |
 | **Rede** | Disponibilidade por túnel, latência até os POPs medida pelo próprio cliente (GSLB), POP mais rápido, histórico de IP de saída, ping/perda/jitter, DNS, TCP até o POP e traceroute. |
-| **Aplicações** | Tempo por fase (DNS, TCP, TLS, 1º byte, total) dos testes do coletor e tráfego por processo/destino: tunelado, bypass e UDP/QUIC bloqueado. |
+| **Aplicações** | Tráfego que o cliente registrou por processo e destino: tunelado, bypass e UDP/QUIC bloqueado. |
 | **Desempenho** | Métricas no estilo do DEM tiradas só dos logs: atraso das tarefas do cliente (responsividade da máquina), travamentos internos, suspensões, processos que disputam CPU, mudanças de rede, NXDOMAIN, RTT e retransmissões até o POP do Private Access, quedas e tempo de reconexão. |
 | **Configuração** | Configuração efetiva traduzida: steering, detecção on-prem (e por que a máquina está On/Off Prem), exceções, apps com certificado fixo, fail-close, permissões do usuário, licença DEM, postura. |
 | **Não classificados / Arquivos / Explorador** | Erros sem padrão conhecido, arquivos lidos e busca em todas as linhas. |
@@ -28,39 +28,23 @@ O app também aponta, com passo a passo: mudanças de rede em excesso e sua orig
 
 Todos os gráficos têm faixas de limite, marcação dos incidentes e dica com o valor no ponto. O relatório pode ser **copiado** ou **salvo** em Markdown para anexar ao chamado.
 
-## Análise equivalente ao DEM, sem licença
+## Como funciona
 
-O Netskope DEM mede a experiência continuamente a partir do endpoint. Sem a licença, o app chega ao mesmo tipo de visibilidade combinando duas fontes:
+O app analisa **pacotes de logs em repouso**: o usuário salva os logs do Netskope Client e envia ao analista, que abre o `.zip` aqui. Nada é coletado da máquina do analista nem do usuário pelo app.
 
-1. **O pacote de logs do Netskope Client** (sempre). Dele o app extrai métricas que o cliente já registra: latência até cada POP a cada seleção de gateway, estados e disponibilidade dos túneis, IP de saída, fluxos tunelados/bypass/bloqueados por processo, erros por minuto e os *snapshots* que o `nsdiag` inclui (processos, memória, disco, Wi-Fi, interfaces), em inglês e português.
-2. **A telemetria do coletor** (opcional, recomendada). O baseline contínuo de CPU, memória, disco, bateria e Wi-Fi **só existe se o coletor estiver rodando** na máquina: o pacote do Netskope tem apenas fotos pontuais desses dados.
+**Como pedir os logs ao usuário** (salvar logo depois do problema, porque os logs giram por tamanho, e informar o horário aproximado):
 
-Quando as duas fontes cobrem o mesmo período, a análise de causa raiz cruza tudo pelo horário: para cada incidente avalia os 5 minutos anteriores e o primeiro minuto (Wi-Fi caiu ou trocou de rede, sinal fraco, CPU/memória/disco saturados, suspensão/energia, perda até a Internet, latência até o POP, DNS, troca de POP, ação do usuário, erro do cliente) e ordena as causas por confiança. Lacunas na coleta aparecem marcadas, para não se confundirem com quedas.
+- **Windows / macOS:** ícone do Netskope na bandeja (barra de menus no Mac) › *Save logs*. O `.zip` vai para a Área de Trabalho.
+- **Linux:** `/opt/netskope/stagent/nsdiag -o ~/NetskopeLogs.zip`
+- **Windows (linha de comando):** `"C:\Program Files (x86)\Netskope\STAgent\nsdiag.exe" -o %USERPROFILE%\Desktop\NetskopeLogs.zip`
 
-**Experience Score:** média ponderada de Dispositivo (25%), Rede (30%), Netskope (25%) e Aplicação (20%), limitada pelo pior componente + 25 pontos (um gargalo grave derruba o score). Faixas: até 30 *Ruim*, até 70 *Regular*, acima de 70 *Bom*.
+**Métricas no estilo do DEM, sem licença:** o pacote não traz séries contínuas de CPU, memória, disco e Wi-Fi (só a foto do momento em que foi salvo), mas o próprio cliente registra sinais ao longo do tempo que o app transforma em métricas: latência até cada POP, RTT e retransmissões do túnel Private Access, estados e disponibilidade dos túneis, motivo e duração de cada queda, IP de saída, mudanças de rede, NXDOMAIN, fluxos tunelados/bypass/bloqueados, atraso das tarefas periódicas do cliente (responsividade da máquina), suspensões e a foto de processos.
 
-### Coletor de telemetria
+A causa raiz cruza tudo pelo horário: para cada incidente avalia os 5 minutos anteriores e o primeiro minuto (troca de rede, mudanças de interface, perda/latência até o POP, falhas com o tenant, DNS, troca de POP, suspensão, ação do usuário, erro do cliente) e ordena as causas por confiança.
 
-**Windows** — no app: *Telemetria* > *Iniciar coleta* (opção de iniciar com o Windows). Também roda sem janela:
+**Experience Score:** média ponderada de Dispositivo (25%), Rede (30%), Netskope (25%) e Aplicação (20%), limitada pelo pior componente + 25 pontos. Faixas: até 30 *Ruim*, até 70 *Regular*, acima de 70 *Bom*. Quando um componente não tem dados no pacote, o score aparece como *parcial*.
 
-```cmd
-NetskopeLogAnalyzer.exe --collect [--minutes 60] [--tenant acme] [--interval 30] [--url https://app.exemplo.com]
-```
-
-Coleta a cada 30 s CPU, memória, disco, E/S, bateria, Wi-Fi (`netsh wlan`), tráfego e top processos; a cada 60 s ping/perda/jitter (gateway e Internet), TCP 443 até `gateway-<tenant>.goskope.com` e `gateway.npa.goskope.com`, DNS e HTTP por fase; a cada 15 min traceroute até o POP; além de eventos de troca de rede, suspensão/retomada e status do `nsdiag`. Arquivos em `%LOCALAPPDATA%\NetskopeLogAnalyzer\telemetry\` (14 dias). Uso de CPU desprezível; nenhum dado sai da máquina.
-
-**Linux/macOS** — `nla-collect.sh` (na release):
-
-```bash
-chmod +x nla-collect.sh
-./nla-collect.sh -t acme -d 60          # coleta por 60 min
-./nla-collect.sh --install -t acme      # contínuo (systemd --user / LaunchAgent)
-./nla-collect.sh --uninstall
-```
-
-Saída em `~/nla-telemetry/`. Para analisar: abra o pacote do Netskope e os arquivos `nla-telemetry-*.jsonl` juntos (arraste todos, ou coloque no mesmo `.zip`). Em *Telemetria* > *Exportar pacote de diagnóstico* o app gera, no Windows, um único `.zip` com os logs do `nsdiag` e a telemetria. Ao abrir um pacote da própria máquina, a telemetria local é incluída automaticamente.
-
-O formato é JSON Lines, uma amostra por linha: `{"t":"2026-11-24T10:00:00-03:00","k":"cpu","v":12.5}`. Tipos: `meta`, `cpu`, `mem`, `disk`, `diskio`, `battery`, `wifi`, `net`, `ping`, `tcp`, `dns`, `http`, `trace`, `procs`, `event`.
+**Fuso horário:** os horários exibidos são os da máquina do usuário (o fuso registrado nos logs), inclusive os das capturas `.pcap`.
 
 ### Atualização automática
 
@@ -72,7 +56,6 @@ Baixe na página de [Releases](../../releases):
 
 - **`NetskopeLogAnalyzer-<versão>-Setup.exe`** — instala em `C:\Program Files\Netskope Log Analyzer`, cria atalho no Menu Iniciar, aparece em *Aplicativos instalados* e adiciona o app em *Abrir com* para `.zip` e `.log`.
 - **`NetskopeLogAnalyzer-<versão>-portatil.zip`** — só o `.exe`, para usar sem instalar.
-- **`nla-collect.sh`** — coletor de telemetria para Linux e macOS.
 
 Uso: abra o app e arraste o `.zip` de logs para a janela (ou *Abrir pacote…*). Também dá para clicar com o botão direito no `.zip` > *Abrir com* > *Netskope Log Analyzer*.
 
@@ -83,15 +66,15 @@ Uso: abra o app e arraste o `.zip` de logs para a janela (ou *Abrir pacote…*).
 ```
 NetskopeLogAnalyzer.sln
 src/NetskopeLogAnalyzer.Core/    motor (net8.0): parser, regras, métricas, snapshots, baseline, score, causa raiz, relatório
-src/NetskopeLogAnalyzer/         app WPF (net8.0-windows): interface, gráficos, coletor, atualização
-collector/nla-collect.sh         coletor Linux/macOS
+src/NetskopeLogAnalyzer/         app WPF (net8.0-windows): interface, gráficos, atualização
+tools/NetskopeLogAnalyzer.Cli/   nla-cli: o mesmo motor na linha de comando (validação)
 tests/NetskopeLogAnalyzer.Tests/ xUnit com pacote de logs sintético
 installer/                       script do instalador (Inno Setup 6)
 assets/                          ícones
 docs/LIBERACAO-TI.md             guia de liberação e implantação para o TI
 build.ps1                        testa e gera Setup.exe, portátil e SHA256SUMS.txt em dist\
 .github/workflows/release.yml    compila e testa a cada push; publica a release quando VERSION muda
-.github/workflows/smoke.yml      roda o coletor e abre todas as abas num runner Windows, com capturas de tela
+.github/workflows/smoke.yml      abre pacotes sintéticos e todas as abas num runner Windows, com capturas de tela
 ```
 
 Requisitos: [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) e, para o `Setup.exe`, [Inno Setup 6](https://jrsoftware.org/isinfo.php).

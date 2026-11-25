@@ -110,17 +110,6 @@ public partial class MainWindow : Window
         try
         {
             var result = await Task.Run(() => new Analyzer().AnalyzePaths(paths, progress));
-            // pacote desta máquina sem telemetria: junta a telemetria local do coletor automaticamente
-            if (!result.HasTelemetry && result.Facts.Host != null && result.Facts.Host.Equals(Environment.MachineName, StringComparison.OrdinalIgnoreCase))
-            {
-                var local = NetskopeLogAnalyzer.Services.TelemetryCollector.LocalTelemetryFiles(14).ToList();
-                if (local.Count > 0)
-                {
-                    TxtProgress.Text = "Incluindo a telemetria local desta máquina…";
-                    var all = paths.Concat(local).ToArray();
-                    result = await Task.Run(() => new Analyzer().AnalyzePaths(all, progress));
-                }
-            }
             if (result.Entries.Count == 0 && result.Findings.Count == 0 && !result.HasTelemetry && result.Snapshots.Count == 0)
             {
                 TxtProgress.Text = "Nenhum log do Netskope reconhecido nesses arquivos.";

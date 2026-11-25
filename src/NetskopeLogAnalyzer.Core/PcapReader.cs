@@ -6,7 +6,7 @@ namespace NetskopeLogAnalyzer.Core;
 /// <summary>
 /// Resumo de capturas .pcap/.pcapng sem depender do Wireshark: pacotes, fluxos TCP, retransmissões,
 /// RST, janela zero, handshakes sem resposta, códigos de resposta DNS, alertas TLS e principais destinos.
-/// Suporta Ethernet, Linux SLL/SLL2, IP puro (túneis), loopback/NULL, IPv4 e IPv6.
+/// Horários em UTC (o analisador converte para o fuso dos logs). Suporta Ethernet, Linux SLL/SLL2, IP puro (túneis), loopback/NULL, IPv4 e IPv6.
 /// </summary>
 public static class PcapReader
 {
@@ -67,7 +67,7 @@ public static class PcapReader
             var sec = U32(off); var frac = U32(off + 4); var incl = (int)U32(off + 8); var orig = U32(off + 12);
             off += 16;
             if (incl < 0 || off + incl > d.Length) { st.S.Error = "captura truncada (resumo parcial)"; break; }
-            var t = DateTimeOffset.FromUnixTimeSeconds(sec).AddTicks(nano ? frac / 100 : frac * 10L).LocalDateTime;
+            var t = DateTimeOffset.FromUnixTimeSeconds(sec).AddTicks(nano ? frac / 100 : frac * 10L).UtcDateTime;
             Packet(st, link, d.AsSpan(off, incl), t, orig);
             off += incl;
         }
@@ -120,7 +120,7 @@ public static class PcapReader
                 if (cap >= 0 && off + 28 + cap <= off + len)
                 {
                     var secs = ts * res;
-                    var t = DateTime.UnixEpoch.AddTicks((long)(secs * TimeSpan.TicksPerSecond)).ToLocalTime();
+                    var t = DateTime.UnixEpoch.AddTicks((long)(secs * TimeSpan.TicksPerSecond));
                     Packet(st, link, d.AsSpan(off + 28, cap), t, orig);
                 }
             }

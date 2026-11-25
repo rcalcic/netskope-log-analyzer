@@ -196,6 +196,13 @@ public sealed class Analyzer
         _r.Entries.AddRange(ordered);
         _r.Unclassified.AddRange(_unc.Values.OrderByDescending(u => u.Count));
         _r.DetectedOs = DetectOs();
+        // capturas: UTC → horário da máquina do usuário (fuso dos logs), não o do analista
+        foreach (var c in _r.Captures)
+        {
+            DateTime Conv(DateTime t) => _r.LogUtcOffset is TimeSpan off ? DateTime.SpecifyKind(t + off, DateTimeKind.Unspecified) : t.ToLocalTime();
+            if (c.First is DateTime f) c.First = Conv(f);
+            if (c.Last is DateTime l) c.Last = Conv(l);
+        }
         _tac = new TacInsights(_r, _texts, _json);
         _tac.Run();
         foreach (var f in _r.Findings)
@@ -267,6 +274,8 @@ public sealed class Analyzer
             {
                 var lv = NormLevel(b.Groups[9].Value); if (lv is null) continue;
                 time = MakeTime(b, 7); level = lv.Value; src = b.Groups[10].Value; msg = b.Groups[11].Value;
+                if (_r.LogUtcOffset is null && Regex.Match(line, @"^\[[^\]]*? ([+-])(\d\d):(\d\d)\]") is { Success: true } tz)
+                    _r.LogUtcOffset = (tz.Groups[1].Value == "-" ? -1 : 1) * new TimeSpan(int.Parse(tz.Groups[2].Value, CultureInfo.InvariantCulture), int.Parse(tz.Groups[3].Value, CultureInfo.InvariantCulture), 0);
             }
             else continue;
             if (time == DateTime.MinValue) continue;
@@ -783,7 +792,7 @@ public sealed class Analyzer
         r.Findings.Sort((a, b) => a.Severity != b.Severity ? a.Severity.CompareTo(b.Severity) : b.Count.CompareTo(a.Count));
 
         if (!r.HasTelemetry)
-            r.DataGaps.Add("Sem telemetria do coletor: o pacote de logs da Netskope não traz séries contínuas de CPU, memória, disco, Wi-Fi, bateria, perda/jitter nem testes de aplicação. Rode o coletor do Netskope Log Analyzer na máquina e analise de novo junto com o pacote para ter o baseline completo e uma causa raiz mais precisa.");
+            r.DataGaps.Add("O pacote de logs da Netskope não traz séries contínuas de CPU, memória, disco, Wi-Fi e perda: os recursos da máquina aparecem só na foto do momento em que o usuário salvou os logs. Desempenho e causa raiz usam os sinais que o próprio cliente registra ao longo do tempo (aba Desempenho).");
         if (_rtt.Count == 0)
             r.DataGaps.Add("Os logs não trazem medições de latência até os POPs (seleção de gateway/GSLB) neste período.");
         if (!r.Snapshots.Any(sn => sn.Processes.Count > 0 || sn.Wifi != null))

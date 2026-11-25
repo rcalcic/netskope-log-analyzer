@@ -546,7 +546,7 @@ public sealed class TacInsights
             Cfg(S, "Tratar domínios sobrepostos no cliente", Bool(Get(c, "clientConfig", "clientHandleOverlappingDomains")), "Decide no cliente quando um domínio está em mais de uma regra (exceção x steering).");
             Cfg(S, "Fail-close bloqueia tráfego privado", Bool(Get(c, "clientConfig", "failcloseBlockPrivateTraffic")), "Com fail-close ativo, se também bloqueia a rede local/privada.");
             var dem = Get(c, "clientConfig", "pdem_subscription_level");
-            Cfg("Experiência (DEM)", "Licença DEM", dem, dem is null or "None" ? "Sem licença de DEM: o console não mostra experiência deste dispositivo. Use o coletor deste app para ter as métricas." : "DEM licenciado.", dem is null or "None");
+            Cfg("Experiência (DEM)", "Licença DEM", dem, dem is null or "None" ? "Sem licença de DEM: o console não mostra experiência deste dispositivo — as métricas da aba Desempenho são calculadas a partir dos logs." : "DEM licenciado.", dem is null or "None");
             Cfg("Experiência (DEM)", "Métricas sintéticas do cliente", Bool(Get(c, "clientConfig", "metrics", "enable")), "Testes de ping/traceroute/DNS do próprio cliente (quando licenciados).");
             Cfg("Experiência (DEM)", "Wi-Fi avançado (DEM)", Bool(Get(c, "clientConfig", "enableAdvanceDEMWifiMetrics")), "Coleta de métricas de Wi-Fi pelo cliente.");
             var post = Get(c, "clientConfig", "postureValidation", "periodic_validation_enabled");
@@ -764,7 +764,7 @@ public sealed class TacInsights
             Key = "perfsched", Severity = late.Count >= 12 ? Severity.Warning : Severity.Info, Category = "Dispositivo",
             Title = $"Máquina demorou a executar tarefas do cliente em {late.Count} momentos (atrasos de 2 min ou mais)",
             Meaning = "As estatísticas que o túnel grava a cada 5 minutos chegaram atrasadas. Isso acontece quando a máquina entra em suspensão leve (tampa fechada, economia de energia agressiva) ou fica sem CPU/disco por um tempo. " +
-                      "Períodos: " + string.Join("; ", clusters.Take(6).Select(c => $"{c.Start:dd/MM HH:mm}–{c.End:HH:mm} ({c.Count})")) + ". Se coincidir com reclamações de lentidão ou queda, rode o coletor para ver CPU, memória e energia no mesmo horário.",
+                      "Períodos: " + string.Join("; ", clusters.Take(6).Select(c => $"{c.Start:dd/MM HH:mm}–{c.End:HH:mm} ({c.Count})")) + ". Se coincidir com reclamações de lentidão ou queda, pergunte ao usuário se a máquina estava com a tampa fechada, em economia de energia ou muito lenta nesse horário.",
             Action = "Verifique energia/suspensão e carga da máquina nesses horários.",
             Count = late.Count, First = late[0], Last = late[^1],
         };
@@ -1031,7 +1031,7 @@ public sealed class TacInsights
                 f.Steps.Add(new("Teste o caminho até o POP do Private Access (TCP 443, 200 amostras):", $"sudo mtr -rwzbc 200 -T -P 443 {gwIp}"));
                 f.Steps.Add(new("Veja sinal, taxa e canal do Wi-Fi e o histórico de reconexões:", "nmcli -f IN-USE,SSID,SIGNAL,RATE,CHAN dev wifi\njournalctl -u NetworkManager --since \"-24h\" | grep -Ei 'disconnect|deauth|beacon|state change' | tail -40"));
             }
-            f.Steps.Add(new("Rode o coletor deste app na máquina por um dia: ele grava Wi-Fi, perda e latência a cada 30 s e a causa raiz de cada queda passa a apontar o trecho exato."));
+            f.Steps.Add(new("Peça ao usuário para anotar o horário da próxima queda e salvar o pacote logo em seguida; compare com o Wi-Fi/roteador nesse momento."));
             f.SearchQuery = "Netskope private access keepAlive fails tunnel disconnected";
             _r.Findings.Add(f);
         }
@@ -1302,7 +1302,7 @@ public sealed class TacInsights
         Q("Há outros softwares ou configurações interferindo?", others.Count > 0 ? string.Join("; ", others) + "." : "Nada detectado.");
 
         var perf = r.Performance.Where(p => p.Status is "crítico" or "atenção").Select(p => $"{p.Name}: {p.Value}").Take(4).ToList();
-        Q("Como está o desempenho da máquina?", perf.Count > 0 ? string.Join("; ", perf) + "." : "Sem sinais de sobrecarga nos logs" + (r.HasTelemetry ? "." : " (sem coletor, CPU/memória/Wi-Fi contínuos não foram medidos)."));
+        Q("Como está o desempenho da máquina?", perf.Count > 0 ? string.Join("; ", perf) + "." : "Sem sinais de sobrecarga nos logs" + (r.HasTelemetry ? "." : " (o pacote não traz série contínua de CPU/memória/Wi-Fi)."));
 
         Q("O que os logs cobrem?", string.Join("; ", r.Coverage.Where(c => !c.Source.StartsWith("Outros", StringComparison.Ordinal)).Take(5).Select(c => $"{c.Source.Split(' ')[0]} {c.First:dd/MM HH:mm}–{c.Last:dd/MM HH:mm}")) + ".");
 

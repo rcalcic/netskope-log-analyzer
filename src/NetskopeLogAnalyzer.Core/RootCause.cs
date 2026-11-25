@@ -190,7 +190,7 @@ public static class RootCause
             if (tenantNear > 0)
                 C("A Internet da máquina caiu ou ficou instável (túnel NPA e tenant pararam de responder juntos)", "Rede", keep ? 0.82 : 0.7,
                     $"{npaDrop.Time:HH:mm:ss} {npaDrop.Detail}; {tenantNear} falha(s) de comunicação com o tenant/GSLB no mesmo intervalo" + (retrans is double rt && rt > 0 ? $"; {rt:0} retransmissões em 5 min antes da queda." : "."),
-                    "Verifique o Wi-Fi/roteador/provedor no horário (o coletor deste app registra sinal, perda e latência a cada 30 s).", "npadrops");
+                    "Pergunte ao usuário se a Internet/Wi-Fi caiu nesse horário e verifique roteador e provedor; se for recorrente, compare com outra rede.", "npadrops");
             else if (keep)
                 C("Caminho até o POP do Private Access instável (gateway deixou de responder)", "Rede", 0.65,
                     $"{npaDrop.Time:HH:mm:ss} {npaDrop.Detail}" + (retrans is double rt2 && rt2 > 0 ? $"; {rt2:0} retransmissões em 5 min." : "."),
@@ -252,8 +252,8 @@ public static class RootCause
 
         if (causes.Count == 0)
             C("Causa não determinada com os dados disponíveis", "Indeterminado", 0.1,
-                r.HasTelemetry ? "Nenhum sinal de Wi-Fi, rede, DNS, dispositivo ou serviço na janela." : "Sem telemetria do coletor para esta máquina e período.",
-                r.HasTelemetry ? "Ative o modo debug do cliente (nsdiag -b start) e reproduza o problema." : "Rode o coletor do Netskope Log Analyzer nesta máquina e analise de novo junto com o pacote de logs.");
+                "Nenhum sinal de Wi-Fi, rede, DNS, dispositivo ou serviço registrado nos logs nesta janela.",
+                "Peça ao usuário para reproduzir o problema, anotar o horário e salvar um novo pacote de logs logo em seguida.");
 
         inc.Causes.AddRange(causes.OrderByDescending(c => c.Confidence));
     }

@@ -144,6 +144,8 @@ public sealed class AnalysisResult
     public List<KeyValuePair<string, string>> CaseSummary { get; } = new();
     /// <summary>Componentes do score que tiveram dados (ex.: "Rede, Netskope"); vazio = completo.</summary>
     public string? ScoreMissing { get; set; }
+    /// <summary>Fuso horário registrado nos logs do usuário (ex.: −03:00). Os horários exibidos são os da máquina do usuário.</summary>
+    public TimeSpan? LogUtcOffset { get; set; }
 
     public MetricSeries GetOrAddSeries(string key, Func<MetricSeries> create)
     {

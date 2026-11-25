@@ -59,7 +59,7 @@ public partial class MainWindow
         p.Children.Add(T("Desempenho da máquina e do túnel", 24, FontWeights.Bold));
         p.Children.Add(Sub("Métricas no estilo do DEM calculadas só a partir dos logs do Netskope Client: responsividade da máquina (atraso das tarefas periódicas, travamentos internos, suspensões), processos que disputam CPU, estabilidade da rede (mudanças de rede, DNS), latência e retransmissões até o POP, quedas e tempo de reconexão do Private Access."));
         if (!r.HasTelemetry)
-            p.Children.Add(Notice("Sem o coletor, CPU, memória, disco e Wi-Fi não têm série contínua: os indicadores de dispositivo abaixo são inferidos (fotos de processos e comportamento do cliente). Com o coletor rodando, a aba Dispositivo mostra o baseline completo.", AmberText, AmberBg));
+            p.Children.Add(Notice("O pacote de logs não traz séries contínuas de CPU, memória, disco e Wi-Fi: os indicadores de dispositivo abaixo são inferidos da foto de processos e do comportamento do próprio cliente ao longo do tempo.", AmberText, AmberBg));
         if (r.Performance.Count == 0) { p.Children.Add(Notice("Os logs deste pacote não têm dados suficientes para métricas de desempenho.", AmberText, AmberBg)); return; }
 
         var wrap = new WrapPanel { Margin = new Thickness(0, 6, 0, 8) };
