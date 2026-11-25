@@ -11,6 +11,7 @@ Os executáveis do Netskope Log Analyzer **não têm assinatura digital**. Por i
   - Links da documentação só abrem no navegador padrão quando o usuário clica.
 - **Atualização:** baixa o Setup da release, confere o SHA-256 com o `SHA256SUMS.txt` e só então executa a instalação silenciosa (pede elevação se o app estiver instalado por máquina).
 - Instalação: `C:\Program Files\Netskope Log Analyzer\NetskopeLogAnalyzer.exe`, atalho no Menu Iniciar e entrada em *Abrir com* para `.zip` e `.log` (chaves em `Software\Classes\Applications\NetskopeLogAnalyzer.exe`).
+- **Entrada não confiável:** o pacote é lido só em memória (nenhum arquivo do `.zip` é gravado em disco, sem risco de *zip slip*), com limites de tamanho (512 MB por arquivo, 3 GB no total), 20.000 entradas, 3 níveis de `.zip` aninhados, detecção de *zip bomb*, linhas truncadas em 16 KB, tempo máximo de 2 s em expressões regulares e limites no leitor de `.pcap`. Valores do log são saneados antes de aparecer em comandos sugeridos; o app nunca executa esses comandos.
 - Código-fonte: https://github.com/rcalcic/netskope-log-analyzer — os pacotes são compilados pelo GitHub Actions a partir desse código.
 
 ## Hashes
@@ -24,7 +25,7 @@ Cada nova versão tem hashes novos e precisa ser liberada de novo.
 
 Conferir um hash no Windows:
 ```powershell
-Get-FileHash .\NetskopeLogAnalyzer-3.2.1-Setup.exe -Algorithm SHA256
+Get-FileHash .\NetskopeLogAnalyzer-4.0.0-Setup.exe -Algorithm SHA256
 ```
 
 ## Instalação silenciosa (Intune, SCCM, GPO)

@@ -15,7 +15,7 @@ Aplicativo **nativo para Windows** (C#/.NET 8, WPF) que analisa o pacote de logs
 | **Experiência** | Score por janela de 5 min dividido em Dispositivo, Rede, Netskope e Aplicação, com o gargalo de cada período. |
 | **Linha do tempo** | Serviço, registro, túnel conectado/derrubado, desativação pelo usuário, troca de rede/IP de saída/POP, eventos de energia e gráfico de erros por minuto. |
 | **Diagnóstico** | ~40 padrões conhecidos (Crítico, Atenção, Informativo, Ruído) com significado, **como resolver**, comandos prontos e documentação oficial. |
-| **Dispositivo** | **Baseline** de CPU, memória, disco, E/S, bateria e Wi-Fi (sinal, RSSI, taxa, canal, AP): mediana, p95, mín./máx., % do tempo acima do limite, anomalias e processos mais pesados em cada pico. |
+| **Dispositivo** | **Baseline de recursos da máquina** a partir da foto do pacote: tempo ligado, núcleos, CPU média desde o boot, quem mais usou CPU, processos, memória total/em uso, maiores consumidores de memória, navegadores e discos, cada um com limite e avaliação. Com telemetria JSONL, séries de CPU, memória, disco e Wi-Fi. |
 | **Rede** | Disponibilidade por túnel, latência até os POPs medida pelo próprio cliente (GSLB), POP mais rápido, histórico de IP de saída, ping/perda/jitter, DNS, TCP até o POP e traceroute. |
 | **Aplicações** | Tráfego que o cliente registrou por processo e destino: tunelado, bypass e UDP/QUIC bloqueado. |
 | **Desempenho** | Métricas no estilo do DEM tiradas só dos logs: atraso das tarefas do cliente (responsividade da máquina), travamentos internos, suspensões, processos que disputam CPU, mudanças de rede, NXDOMAIN, RTT e retransmissões até o POP do Private Access, quedas e tempo de reconexão. |
@@ -27,6 +27,16 @@ No **Resumo**, o app responde às perguntas que o suporte faz primeiro (sintoma,
 O app também aponta, com passo a passo: mudanças de rede em excesso e sua origem (containers Docker, VMs, VPNs), domínio de pesquisa DNS sendo anexado a nomes públicos, redes locais sobrepostas às rotas do Private Access, agentes de segurança consumindo CPU, POP mais lento que o melhor disponível e reautenticação programada (separada das quedas reais).
 
 Todos os gráficos têm faixas de limite, marcação dos incidentes e dica com o valor no ponto. O relatório pode ser **copiado** ou **salvo** em Markdown para anexar ao chamado.
+
+## Análise direcionada pelo relato do usuário
+
+Na tela inicial, antes de abrir o pacote, marque o que o usuário relatou (pode marcar vários): **Lentidão, Site ou URL não abre, Private Access, DNS, Sem navegação, Quedas e desconexões, Certificado/SSL, Aplicativo específico, Bloqueio indevido, Login/registro, Cliente desligado ou travando, Máquina lenta (CPU/memória), Conflito com VPN, Dentro da empresa (on-prem) e Wi-Fi/rede local**. Opcionalmente informe o **site afetado** e o **horário do problema**.
+
+O Resumo passa a abrir com o bloco **Foco da análise**: para cada sintoma, uma lista de verificações com estado (*problema*, *atenção*, *ok*, *sem dados*), o veredito (*Problema encontrado*, *Possível causa* ou *Nada relevante nos logs*) e próximos passos. O site informado é procurado no tráfego (tunelado, bypass, DNS, erros, processos) e nas exceções do steering; o horário destaca os incidentes em ±30 min. No Diagnóstico, o filtro **◎ Relato do usuário** mostra primeiro o que tem a ver com o relato. Dá para mudar o foco depois sem reabrir o pacote.
+
+## Tema escuro
+
+O botão ☾/☀ no topo alterna entre claro e escuro, com a paleta da Netskope. Em *Configurações › Aparência* dá para escolher *Igual ao Windows*, *Claro* ou *Escuro*.
 
 ## Como funciona
 
@@ -45,6 +55,10 @@ A causa raiz cruza tudo pelo horário: para cada incidente avalia os 5 minutos a
 **Experience Score:** média ponderada de Dispositivo (25%), Rede (30%), Netskope (25%) e Aplicação (20%), limitada pelo pior componente + 25 pontos. Faixas: até 30 *Ruim*, até 70 *Regular*, acima de 70 *Bom*. Quando um componente não tem dados no pacote, o score aparece como *parcial*.
 
 **Fuso horário:** os horários exibidos são os da máquina do usuário (o fuso registrado nos logs), inclusive os das capturas `.pcap`.
+
+### Segurança
+
+O pacote de logs é tratado como entrada não confiável: limites de tamanho por arquivo e total, número de entradas e profundidade de `.zip` aninhados, detecção de *zip bomb*, extração só em memória (sem gravar arquivos do pacote em disco), linhas truncadas, tempo máximo em todas as expressões regulares, limites no leitor de `.pcap` e isolamento de falhas por arquivo e por etapa. Valores vindos do log são saneados antes de entrar nos comandos sugeridos, e só links `https` são abertos.
 
 ### Atualização automática
 

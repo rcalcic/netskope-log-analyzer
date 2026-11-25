@@ -1311,7 +1311,9 @@ public sealed class TacInsights
             var active = span - total;
             var days = Math.Max(1, span.TotalDays);
             P(MetricCatalog.Device, "Períodos sem atividade (suspensa/desligada)", $"{_gaps.Count} · total {TelemetryParser.Fmt(total)}", "—", "—",
-                $"Intervalos de 15 min ou mais sem nenhum log. Tempo ativo médio: {TelemetryParser.Fmt(TimeSpan.FromHours(active.TotalHours / days))} por dia.");
+                span.TotalDays >= 2
+                    ? $"Intervalos de 15 min ou mais sem nenhum log. Tempo ativo médio: {TelemetryParser.Fmt(TimeSpan.FromHours(active.TotalHours / days))} por dia."
+                    : $"Intervalos de 15 min ou mais sem nenhum log. Ativo {TelemetryParser.Fmt(active)} de {TelemetryParser.Fmt(span)} cobertos pelos logs.");
         }
 
         // ---- rede

@@ -13,7 +13,7 @@
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
           <Button x:Name="BtnCopyReport" Content="Copiar relatório" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Visibility="Collapsed" Click="CopyReport_Click"/>
           <Button x:Name="BtnSaveReport" Content="Salvar relatório…" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Visibility="Collapsed" Click="SaveReport_Click"/>
-          <Button x:Name="BtnTheme" Content="☾" ToolTip="Alternar tema claro/escuro" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Padding="14,0" Click="Theme_Click" AutomationProperties.Name="Alternar tema"/>
+          <Button x:Name="BtnTheme" Content="☾" ToolTip="Alternar tema claro/escuro" Style="{StaticResource PillOnNight}" FontFamily="Segoe UI Symbol" Margin="8,0,0,0" Padding="14,0" Click="Theme_Click" AutomationProperties.Name="Alternar tema"/>
           <Button x:Name="BtnSettings" Content="Configurações" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Settings_Click"/>
           <Button x:Name="BtnOpen" Content="Abrir pacote…" Style="{StaticResource PillOnNight}" Margin="8,0,0,0" Click="Open_Click"/>
         </StackPanel>
@@ -53,7 +53,7 @@
               Importe o <Bold>.zip</Bold> salvo pelo Netskope Client (“Save logs” / nsdiag -o). O app separa o que é problema real do que é ruído conhecido e mostra como resolver cada item.
             </TextBlock>
 
-            <TextBlock Text="1. O que o usuário relatou? (opcional, pode marcar vários)" FontWeight="Bold" FontSize="16" Margin="0,24,0,8"/>
+            <TextBlock Text="1. O que o usuário relatou? (opcional, pode marcar vários)" TextWrapping="Wrap" FontWeight="Bold" FontSize="16" Margin="0,24,0,8"/>
             <WrapPanel x:Name="SymptomChips"/>
             <Grid Margin="0,6,0,0">
               <Grid.ColumnDefinitions>
@@ -105,7 +105,7 @@
       </ScrollViewer>
 
       <!-- ======================= resultados ======================= -->
-      <TabControl x:Name="Tabs" Visibility="Collapsed" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Line}" Padding="0" Margin="16,8,16,0">
+      <TabControl x:Name="Tabs" Visibility="Collapsed" Background="{DynamicResource Background}" Foreground="{DynamicResource Ink}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Line}" Padding="0" Margin="16,8,16,0">
         <TabItem x:Name="TabSummary" Header="Resumo">
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="SummaryPanel" Margin="8,16,8,24"/>
