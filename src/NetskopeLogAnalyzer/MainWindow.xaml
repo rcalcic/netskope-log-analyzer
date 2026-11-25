@@ -40,7 +40,7 @@
 
     <Grid>
       <!-- ======================= tela inicial ======================= -->
-      <ScrollViewer x:Name="DropView" VerticalScrollBarVisibility="Auto">
+      <ScrollViewer Foreground="{DynamicResource Ink}" x:Name="DropView" VerticalScrollBarVisibility="Auto">
         <Grid Margin="56,40" MaxWidth="1240">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="1*"/>
@@ -107,37 +107,37 @@
       <!-- ======================= resultados ======================= -->
       <TabControl x:Name="Tabs" Visibility="Collapsed" Background="{DynamicResource Background}" Foreground="{DynamicResource Ink}" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Line}" Padding="0" Margin="16,8,16,0">
         <TabItem x:Name="TabSummary" Header="Resumo">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="SummaryPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabIncidents" Header="Incidentes">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="IncidentsPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabExperience" Header="Experiência">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="ExperiencePanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabPerformance" Header="Desempenho">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="PerformancePanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabTimeline" Header="Linha do tempo">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="8,16,8,24">
               <TextBlock Text="Linha do tempo do cliente" FontSize="24" FontWeight="Bold"/>
               <TextBlock Foreground="{DynamicResource Mute}" Margin="0,6,0,12" TextWrapping="Wrap"
                          Text="Cada estação é um evento: início/parada do serviço, registro, túnel conectado ou derrubado, mudança de localização. Passe o mouse para ver detalhes."/>
               <Border Background="{DynamicResource Soft}" CornerRadius="16">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                <ScrollViewer Foreground="{DynamicResource Ink}" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                   <Canvas x:Name="TimelineCanvas" Height="220"/>
                 </ScrollViewer>
               </Border>
@@ -152,7 +152,7 @@
         </TabItem>
 
         <TabItem x:Name="TabFindings" Header="Diagnóstico">
-          <ScrollViewer x:Name="FindingsScroll" VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" x:Name="FindingsScroll" VerticalScrollBarVisibility="Auto">
             <StackPanel Margin="8,16,8,24">
               <TextBlock Text="Diagnóstico" FontSize="24" FontWeight="Bold"/>
               <TextBlock Foreground="{DynamicResource Mute}" Margin="0,6,0,4" TextWrapping="Wrap"
@@ -166,25 +166,25 @@
         </TabItem>
 
         <TabItem x:Name="TabDevice" Header="Dispositivo">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="DevicePanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabNetwork" Header="Rede">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="NetworkPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabApps" Header="Aplicações">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="AppsPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>
 
         <TabItem x:Name="TabConfig" Header="Configuração">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="ConfigPanel" Margin="8,16,8,24"/>
           </ScrollViewer>
         </TabItem>

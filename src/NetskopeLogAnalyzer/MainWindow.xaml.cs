@@ -536,7 +536,7 @@ public partial class MainWindow : Window
         tags.Children.Add(T(f.Category, 12, fg: Mute, wrap: false));
         foreach (var tag in f.FocusTags.Take(3)) tags.Children.Add(Pill("◎ " + tag, Theme.OnAccent, Theme.Accent));
         hl.Children.Add(tags);
-        var titleLine = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
+        var titleLine = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0), Foreground = Ink };
         titleLine.Inlines.Add(new Run(open ? "▾ " : "▸ ") { Foreground = Mute, FontSize = 16 });
         titleLine.Inlines.Add(new Run(f.Title) { FontSize = 17, FontWeight = FontWeights.Bold });
         hl.Children.Add(titleLine);
@@ -546,7 +546,7 @@ public partial class MainWindow : Window
         if (meta.Count > 0) hl.Children.Add(T(string.Join("    ", meta), 12, fg: Mute, margin: new Thickness(0, 4, 0, 0)));
         header.Children.Add(hl);
         var num = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(16, 0, 0, 0) };
-        num.Children.Add(new TextBlock { Text = f.Count.ToString("N0", CultureInfo.GetCultureInfo("pt-BR")), FontSize = 26, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Right });
+        num.Children.Add(new TextBlock { Text = f.Count.ToString("N0", CultureInfo.GetCultureInfo("pt-BR")), FontSize = 26, FontWeight = FontWeights.Bold, Foreground = Ink, HorizontalAlignment = HorizontalAlignment.Right });
         num.Children.Add(T(f.Count == 1 ? "ocorrência" : "ocorrências", 12, fg: Mute, wrap: false));
         Grid.SetColumn(num, 1);
         header.Children.Add(num);
@@ -646,7 +646,7 @@ public partial class MainWindow : Window
 
     private static TextBlock LinkLine(string prefix, Reference r, Thickness? margin = null)
     {
-        var tb = new TextBlock { Margin = margin ?? new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap };
+        var tb = new TextBlock { Margin = margin ?? new Thickness(0, 2, 0, 2), TextWrapping = TextWrapping.Wrap, Foreground = Ink };
         if (prefix.Length > 0) tb.Inlines.Add(new Run(prefix));
         var h = new Hyperlink(new Run(r.Title)) { Foreground = Blue, FontWeight = FontWeights.SemiBold, ToolTip = r.Url };
         h.Click += (_, _) => OpenUrl(r.Url);

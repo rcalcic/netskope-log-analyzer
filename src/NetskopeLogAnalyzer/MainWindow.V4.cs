@@ -173,7 +173,7 @@ public partial class MainWindow
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(28) });
             g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             var ic = new Border { Background = bg, CornerRadius = new CornerRadius(10), Width = 20, Height = 20, VerticalAlignment = VerticalAlignment.Top, Child = new TextBlock { Text = icon, Foreground = fg, FontSize = 11, FontWeight = FontWeights.Bold, HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }, ToolTip = c.Status };
-            var tb = new TextBlock { TextWrapping = TextWrapping.Wrap };
+            var tb = new TextBlock { TextWrapping = TextWrapping.Wrap, Foreground = Ink };
             tb.Inlines.Add(new System.Windows.Documents.Run(c.Name + ": ") { FontWeight = FontWeights.SemiBold });
             tb.Inlines.Add(new System.Windows.Documents.Run(SafeText.Printable(c.Detail)));
             Grid.SetColumn(tb, 1);
