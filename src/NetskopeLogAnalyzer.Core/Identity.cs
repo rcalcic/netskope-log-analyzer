@@ -270,8 +270,10 @@ public sealed class IdentityCollector
             Set(Machine, "Modelo", S(c, "cache", "device", "model"), "nsconfig.json");
             Set(Machine, "Número de série", S(c, "cache", "device", "serial_num"), "nsconfig.json");
             var osName = S(c, "cache", "device", "os");
-            if (_distro is { Length: > 0 } && osName is "Linux") osName = char.ToUpperInvariant(_distro[0]) + _distro[1..] + " (Linux)";
-            var os = $"{osName} {S(c, "cache", "device", "os_version")}".Trim();
+            var osVer = S(c, "cache", "device", "os_version");
+            var os = _distro is { Length: > 0 } && osName is "Linux"
+                ? $"{char.ToUpperInvariant(_distro[0])}{_distro[1..]} {osVer} (Linux)".Replace("  ", " ")
+                : $"{osName} {osVer}".Trim();
             Set(Machine, "Sistema", os, "nsconfig.json");
             Set(Netskope, "Versão do cliente", S(c, "cache", "device", "ns_version"), "nsconfig.json");
             if (long.TryParse(S(c, "cache", "appinstalltimestamp"), NumberStyles.Integer, CultureInfo.InvariantCulture, out var it) && it > 1_000_000_000) _installTs = it;
