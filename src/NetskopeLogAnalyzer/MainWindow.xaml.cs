@@ -624,8 +624,12 @@ public partial class MainWindow : Window
         return tb;
     }
 
+    /// <summary>Só abre links https (nunca arquivos, programas ou outros esquemas).</summary>
+    private static bool IsHttps(string? url) => Uri.TryCreate(url, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps && !string.IsNullOrEmpty(u.Host);
+
     private static void OpenUrl(string url)
     {
+        if (!IsHttps(url)) { MessageBox.Show("Link bloqueado (somente endereços https são abertos):\n" + url, "Netskope Log Analyzer"); return; }
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); }
         catch (Exception ex) { MessageBox.Show("Não foi possível abrir o link:\n" + url + "\n\n" + ex.Message, "Netskope Log Analyzer"); }
     }

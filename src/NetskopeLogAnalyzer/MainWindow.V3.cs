@@ -597,7 +597,7 @@ public partial class MainWindow
 
     private static void OpenUrlSafe(string url)
     {
-        if (string.IsNullOrEmpty(url)) return;
+        if (!IsHttps(url)) return;
         try { Process.Start(new ProcessStartInfo(url) { UseShellExecute = true }); } catch (Exception) { }
     }
 }

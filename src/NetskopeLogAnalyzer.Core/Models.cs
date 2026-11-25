@@ -49,6 +49,8 @@ public sealed class Finding
     public List<FixStep> Steps { get; } = new();
     public List<Reference> References { get; } = new();
     public string SearchQuery { get; set; } = "";
+    /// <summary>Sintomas selecionados pelo analista aos quais este item se relaciona.</summary>
+    public List<string> FocusTags { get; } = new();
     public string? ExplorerQuery { get; init; }
 
     // usados só pela detecção de ambiente, para montar os comandos
@@ -146,6 +148,15 @@ public sealed class AnalysisResult
     public string? ScoreMissing { get; set; }
     /// <summary>Fuso horário registrado nos logs do usuário (ex.: −03:00). Os horários exibidos são os da máquina do usuário.</summary>
     public TimeSpan? LogUtcOffset { get; set; }
+
+    // ---- v4: análise direcionada pelo sintoma relatado
+    public AnalysisOptions Options { get; set; } = new();
+    public List<FocusResult> Focus { get; } = new();
+    public DomainReport? Domain { get; set; }
+    /// <summary>Padrões de exceção (bypass) do steering: seção → domínio/IP.</summary>
+    public List<KeyValuePair<string, string>> ExceptionPatterns { get; } = new();
+    /// <summary>Processos com certificado fixo (ficam fora da inspeção).</summary>
+    public List<string> CertPinnedApps { get; } = new();
 
     public MetricSeries GetOrAddSeries(string key, Func<MetricSeries> create)
     {

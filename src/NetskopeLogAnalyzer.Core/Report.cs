@@ -44,6 +44,29 @@ public static class Report
             foreach (var (q, a) in r.CaseSummary) sb.AppendLine($"- **{q}** {a}");
             sb.AppendLine();
         }
+        if (r.Focus.Count > 0 || r.Domain != null || r.Options.ProblemTime != null)
+        {
+            sb.AppendLine("## Foco da análise (relato do usuário)");
+            var rel = new List<string>();
+            if (r.Focus.Count > 0) rel.Add("sintomas: " + string.Join(", ", r.Focus.Select(f => f.Symptom.Label)));
+            if (r.Domain != null) rel.Add("site: " + r.Domain.Domain);
+            if (r.Options.ProblemTime is DateTime pt) rel.Add($"horário: {pt:dd/MM HH:mm}");
+            sb.AppendLine("Relato: " + string.Join(" · ", rel) + ".");
+            sb.AppendLine();
+            foreach (var f in r.Focus)
+            {
+                sb.AppendLine($"### {f.Symptom.Label} — {f.Verdict}");
+                sb.AppendLine(f.Summary);
+                foreach (var c in f.Checks) sb.AppendLine($"- [{c.Status}] **{c.Name}**: {c.Detail}");
+                if (f.NextSteps.Count > 0) { sb.AppendLine("Próximos passos:"); foreach (var n in f.NextSteps) sb.AppendLine("  - " + n); }
+                sb.AppendLine();
+            }
+            if (r.Domain is DomainReport d && r.Focus.Count == 0)
+            {
+                sb.AppendLine($"Site {d.Domain}: {d.Lines} linha(s), {d.Tunneled} tunelada(s), {d.Bypassed} em bypass, {d.Errors} erro(s)" + (d.Exceptions.Count > 0 ? "; em exceção: " + string.Join("; ", d.Exceptions) : "") + ".");
+                sb.AppendLine();
+            }
+        }
         if (r.Performance.Count > 0)
         {
             sb.AppendLine("## Desempenho (derivado dos logs)");

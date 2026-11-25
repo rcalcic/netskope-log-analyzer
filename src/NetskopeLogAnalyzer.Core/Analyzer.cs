@@ -70,6 +70,9 @@ public sealed class Analyzer
         public readonly List<DateTime> Times = new();
     }
 
+    /// <summary>Sintomas, site e horário informados pelo analista (opcional).</summary>
+    public AnalysisOptions Options { get; set; } = new();
+
     private AnalysisResult _r = new();
     private readonly Dictionary<string, RuleHits> _hits = new();
     private readonly Dictionary<string, UnclassifiedGroup> _unc = new();
@@ -95,8 +98,13 @@ public sealed class Analyzer
         {
             if (Directory.Exists(p))
             {
-                foreach (var f in Directory.EnumerateFiles(p, "*", SearchOption.AllDirectories))
+                var opts = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint | FileAttributes.System, IgnoreInaccessible = true, MaxRecursionDepth = 8 };
+                var count = 0;
+                foreach (var f in Directory.EnumerateFiles(p, "*", opts))
+                {
+                    if (++count > InputLimits.MaxFolderFiles) { skipped.Add($"{p}: mais de {InputLimits.MaxFolderFiles} arquivos — o restante foi ignorado"); break; }
                     AddFile(f, Path.GetRelativePath(p, f), items, skipped, progress);
+                }
             }
             else if (File.Exists(p))
             {
@@ -111,32 +119,70 @@ public sealed class Analyzer
     private static void AddFile(string path, string name, List<SourceItem> items, List<string> skipped, IProgress<string>? progress)
     {
         progress?.Report("Lendo " + Path.GetFileName(path) + "…");
-        var data = File.ReadAllBytes(path);
-        if (IsZip(data)) ExtractZip(data, "", items, skipped);
-        else items.Add(new SourceItem(name, data));
+        try
+        {
+            var len = new FileInfo(path).Length;
+            if (len > InputLimits.MaxFileBytes) { skipped.Add($"{name} (maior que {InputLimits.MaxFileBytes / 1048576} MB — ignorado)"); return; }
+            var data = File.ReadAllBytes(path);
+            if (IsZip(data)) ExtractZip(data, "", items, skipped);
+            else items.Add(new SourceItem(name, data));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Security.SecurityException)
+        {
+            skipped.Add($"{name} (não foi possível ler: {ex.Message})");
+        }
     }
 
     private static bool IsZip(byte[] d) => d.Length > 4 && d[0] == 0x50 && d[1] == 0x4B && (d[2] == 3 || d[2] == 5) && (d[3] == 4 || d[3] == 6);
 
     public static void ExtractZip(byte[] data, string prefix, List<SourceItem> items, List<string> skipped)
     {
-        using var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read);
-        foreach (var e in zip.Entries)
+        long total = items.Sum(i => (long)i.Data.Length);
+        ExtractZip(data, prefix, items, skipped, 0, ref total);
+    }
+
+    /// <summary>
+    /// Extrai em memória (nada é gravado em disco, então não há "zip slip"), com limites contra zip bomb,
+    /// zips aninhados em profundidade e excesso de entradas.
+    /// </summary>
+    private static void ExtractZip(byte[] data, string prefix, List<SourceItem> items, List<string> skipped, int depth, ref long total)
+    {
+        ZipArchive zip;
+        try { zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read); }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or ArgumentException or NotSupportedException)
         {
-            if (string.IsNullOrEmpty(e.Name)) continue; // pasta
-            var full = prefix + e.FullName;
-            try
+            skipped.Add((prefix.Length > 0 ? prefix : "pacote") + " (zip inválido ou corrompido)");
+            return;
+        }
+        using (zip)
+        {
+            var n = 0;
+            foreach (var e in zip.Entries)
             {
-                using var s = e.Open();
-                using var ms = new MemoryStream();
-                s.CopyTo(ms);
-                var bytes = ms.ToArray();
-                if (e.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && IsZip(bytes)) ExtractZip(bytes, full + "/", items, skipped);
-                else items.Add(new SourceItem(full, bytes));
-            }
-            catch (Exception)
-            {
-                skipped.Add(full + " (não foi possível extrair)");
+                if (string.IsNullOrEmpty(e.Name)) continue; // pasta
+                var full = prefix + e.FullName.Replace('\\', '/');
+                if (++n > InputLimits.MaxZipEntries) { skipped.Add($"{prefix}: mais de {InputLimits.MaxZipEntries} arquivos no zip — o restante foi ignorado"); break; }
+                if (e.Length > InputLimits.MaxEntryBytes) { skipped.Add($"{full} (muito grande: {e.Length / 1048576} MB)"); continue; }
+                if (e.CompressedLength > 0 && e.Length > 50L * 1024 * 1024 && (double)e.Length / e.CompressedLength > InputLimits.MaxCompressionRatio)
+                { skipped.Add($"{full} (taxa de compressão suspeita — possível zip bomb)"); continue; }
+                if (total + e.Length > InputLimits.MaxTotalUncompressed) { skipped.Add($"{full} (limite total de {InputLimits.MaxTotalUncompressed / 1073741824} GB descompactados atingido)"); break; }
+                try
+                {
+                    byte[]? bytes;
+                    using (var s = e.Open()) bytes = InputLimits.ReadBounded(s, Math.Min(InputLimits.MaxEntryBytes, InputLimits.MaxTotalUncompressed - total));
+                    if (bytes is null) { skipped.Add($"{full} (conteúdo maior que o declarado — ignorado)"); continue; }
+                    total += bytes.Length;
+                    if (e.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && IsZip(bytes))
+                    {
+                        if (depth + 1 >= InputLimits.MaxZipDepth) { skipped.Add($"{full} (zip aninhado em profundidade demais)"); continue; }
+                        ExtractZip(bytes, full + "/", items, skipped, depth + 1, ref total);
+                    }
+                    else items.Add(new SourceItem(full, bytes));
+                }
+                catch (Exception ex) when (ex is InvalidDataException or IOException or NotSupportedException or UnauthorizedAccessException)
+                {
+                    skipped.Add(full + " (não foi possível extrair)");
+                }
             }
         }
     }
@@ -166,27 +212,39 @@ public sealed class Analyzer
 
             var fi = _r.Files.Count;
             _r.Files.Add(new LogFileInfo { Name = it.Name, Size = it.Data.Length });
-
-            if (TelemetryParser.LooksLikeTelemetry(baseName, text))
+            try
             {
-                TelemetryParser.Parse(text, baseName, _r);
-                continue;
-            }
 
-            if (Regex.IsMatch(baseName, @"\.(json|conf|bak)$", RegexOptions.IgnoreCase)) ParseJson(baseName, text);
-            if (baseName.Equals("install.log", StringComparison.OrdinalIgnoreCase)) ParseInstall(text);
-            if (Regex.IsMatch(baseName, "network-state|ipconfig|netstat", RegexOptions.IgnoreCase)) ParseNetworkState(text, baseName);
-            if (Regex.IsMatch(baseName, @"network-state|ipconfig|netstat|nmcli|resolv|route|ifconfig|ip[-_]?addr|scutil|ps[-_]?aux|process|appinfo", RegexOptions.IgnoreCase) && text.Length < 20_000_000) _texts[baseName] = text;
-            if (Regex.IsMatch(baseName, @"process|tasklist|ps[-_]?aux", RegexOptions.IgnoreCase)) ScanProcesses(text, baseName);
-            if (baseName.StartsWith("appinfo", StringComparison.OrdinalIgnoreCase))
-            {
-                var apps = KnowledgeBase.Conflicts.Where(c => c.Re.IsMatch(text)).Select(c => c.Name).ToList();
-                if (apps.Count > 0) _r.Facts.InstalledVpnApps = string.Join(", ", apps);
+                if (TelemetryParser.LooksLikeTelemetry(baseName, text))
+                {
+                    TelemetryParser.Parse(text, baseName, _r);
+                    continue;
+                }
+
+                if (Regex.IsMatch(baseName, @"\.(json|conf|bak)$", RegexOptions.IgnoreCase)) ParseJson(baseName, text);
+                if (baseName.Equals("install.log", StringComparison.OrdinalIgnoreCase)) ParseInstall(text);
+                if (Regex.IsMatch(baseName, "network-state|ipconfig|netstat", RegexOptions.IgnoreCase)) ParseNetworkState(text, baseName);
+                if (Regex.IsMatch(baseName, @"network-state|ipconfig|netstat|nmcli|resolv|route|ifconfig|ip[-_]?addr|scutil|ps[-_]?aux|process|appinfo", RegexOptions.IgnoreCase) && text.Length < 20_000_000) _texts[baseName] = text;
+                if (Regex.IsMatch(baseName, @"process|tasklist|ps[-_]?aux", RegexOptions.IgnoreCase)) ScanProcesses(text, baseName);
+                if (baseName.StartsWith("appinfo", StringComparison.OrdinalIgnoreCase))
+                {
+                    var apps = KnowledgeBase.Conflicts.Where(c => c.Re.IsMatch(text)).Select(c => c.Name).ToList();
+                    if (apps.Count > 0) _r.Facts.InstalledVpnApps = string.Join(", ", apps);
+                }
+                ParseLog(fi, text);
+                try
+                {
+                    if (_r.Files[fi].Lines < 20 && SnapshotParsers.Parse(baseName, text, _collectedAt) is Snapshot snap) _r.Snapshots.Add(snap);
+                }
+                catch (RegexMatchTimeoutException) { _r.Skipped.Add(baseName + " (formato anômalo)"); }
             }
-            ParseLog(fi, text);
-            if (_r.Files[fi].Lines < 20 && SnapshotParsers.Parse(baseName, text, null) is Snapshot snap) _r.Snapshots.Add(snap);
+            catch (Exception ex) when (ex is RegexMatchTimeoutException or JsonException or FormatException or InvalidOperationException or ArgumentException or OverflowException or IndexOutOfRangeException or KeyNotFoundException)
+            {
+                _r.Skipped.Add($"{baseName} (análise interrompida: formato inesperado)");
+            }
         }
 
+        if (_skippedLines > 0) _r.DataGaps.Add($"{_skippedLines} linha(s) ignorada(s) por formato anômalo (proteção contra entrada maliciosa).");
         DeriveFacts();
         BuildFindings();
         _r.Events.Sort((a, b) => a.Time.CompareTo(b.Time));
@@ -204,7 +262,7 @@ public sealed class Analyzer
             if (c.Last is DateTime l) c.Last = Conv(l);
         }
         _tac = new TacInsights(_r, _texts, _json);
-        _tac.Run();
+        Guard("análises de suporte", _tac.Run);
         foreach (var f in _r.Findings)
         {
             f.Steps.AddRange(KnowledgeBase.BuildSteps(f, _r.DetectedOs, _r.Facts.TenantHost));
@@ -263,22 +321,49 @@ public sealed class Analyzer
         while ((line = reader.ReadLine()) != null)
         {
             if (line.Length == 0) continue;
+            if (line.Length > 16384) line = line[..16384]; // linhas gigantes (forjadas ou corrompidas) não travam os regex
+            if (_r.Entries.Count >= InputLimits.MaxEntries)
+            {
+                if (!_r.DataGaps.Any(g => g.StartsWith("Limite de linhas", StringComparison.Ordinal)))
+                    _r.DataGaps.Add($"Limite de linhas atingido ({InputLimits.MaxEntries:N0}): o restante dos logs não foi analisado.");
+                break;
+            }
+            try { ParseLine(fi, file, line); }
+            catch (RegexMatchTimeoutException) { _skippedLines++; }
+        }
+    }
+
+    private int _skippedLines;
+
+    /// <summary>Uma etapa que falhar com dados inesperados não derruba a análise inteira.</summary>
+    private void Guard(string stage, Action a)
+    {
+        try { a(); }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _r.DataGaps.Add($"A etapa “{stage}” não pôde ser concluída com estes dados ({ex.GetType().Name}). O restante da análise segue válido.");
+        }
+    }
+
+    private void ParseLine(int fi, LogFileInfo file, string line)
+    {
+        {
             DateTime time; LogLevel level; string src, msg;
             var a = LineA.Match(line);
             if (a.Success)
             {
-                var lv = NormLevel(a.Groups[11].Value); if (lv is null) continue;
+                var lv = NormLevel(a.Groups[11].Value); if (lv is null) return;
                 time = MakeTime(a, 7); level = lv.Value; src = a.Groups[12].Value; msg = a.Groups[13].Value;
             }
             else if (line[0] == '[' && LineB.Match(line) is { Success: true } b)
             {
-                var lv = NormLevel(b.Groups[9].Value); if (lv is null) continue;
+                var lv = NormLevel(b.Groups[9].Value); if (lv is null) return;
                 time = MakeTime(b, 7); level = lv.Value; src = b.Groups[10].Value; msg = b.Groups[11].Value;
                 if (_r.LogUtcOffset is null && Regex.Match(line, @"^\[[^\]]*? ([+-])(\d\d):(\d\d)\]") is { Success: true } tz)
                     _r.LogUtcOffset = (tz.Groups[1].Value == "-" ? -1 : 1) * new TimeSpan(int.Parse(tz.Groups[2].Value, CultureInfo.InvariantCulture), int.Parse(tz.Groups[3].Value, CultureInfo.InvariantCulture), 0);
             }
-            else continue;
-            if (time == DateTime.MinValue) continue;
+            else return;
+            if (time == DateTime.MinValue) return;
 
             file.Lines++;
             if (file.First is null || time < file.First) file.First = time;
@@ -787,7 +872,7 @@ public sealed class Analyzer
         }
 
         r.Apps.AddRange(_apps.Values.OrderByDescending(a => a.Total));
-        _tac?.AfterMetrics();
+        if (_tac != null) Guard("sessões e capturas", _tac.AfterMetrics);
         foreach (var f in r.Findings.Where(f => f.SearchQuery.Length == 0)) f.SearchQuery = f.Title;
         r.Findings.Sort((a, b) => a.Severity != b.Severity ? a.Severity.CompareTo(b.Severity) : b.Count.CompareTo(a.Count));
 
@@ -798,9 +883,10 @@ public sealed class Analyzer
         if (!r.Snapshots.Any(sn => sn.Processes.Count > 0 || sn.Wifi != null))
             r.DataGaps.Add("O pacote não traz fotos instantâneas de processos ou Wi-Fi (ps aux, tasklist, netsh wlan, nmcli…).");
 
-        Baseline.Compute(r);
-        ExperienceScore.Compute(r);
-        RootCause.Analyze(r);
-        _tac?.Finish();
+        Guard("baseline", () => Baseline.Compute(r));
+        Guard("Experience Score", () => ExperienceScore.Compute(r));
+        Guard("causa raiz", () => RootCause.Analyze(r));
+        if (_tac != null) Guard("desempenho e resumo do caso", _tac.Finish);
+        Guard("análise direcionada", () => FocusAnalyzer.Run(r, Options));
     }
 }

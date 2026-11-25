@@ -11,6 +11,8 @@ namespace NetskopeLogAnalyzer.Core;
 public static class PcapReader
 {
     private const int MaxSeqPerFlow = 50000;
+    private const int MaxFlows = 200000;      // limite de memória para capturas grandes ou forjadas
+    private const long MaxPackets = 20_000_000;
 
     public static bool LooksLikeCapture(string name, byte[] d) =>
         d.Length >= 24 && (IsPcap(d) || IsPcapNg(d)) || name.EndsWith(".pcap", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".pcapng", StringComparison.OrdinalIgnoreCase);
@@ -41,7 +43,7 @@ public static class PcapReader
             else if (IsPcapNg(d)) ReadPcapNg(d, st);
             else st.S.Error = "formato de captura não reconhecido";
         }
-        catch (Exception ex) when (ex is ArgumentException or IndexOutOfRangeException or OverflowException)
+        catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             st.S.Error ??= "captura truncada (resumo parcial)";
         }
@@ -144,6 +146,7 @@ public static class PcapReader
     private static void Packet(State st, int link, ReadOnlySpan<byte> p, DateTime? t, uint orig)
     {
         var s = st.S;
+        if (s.Packets >= MaxPackets) { s.Error ??= "captura muito grande (resumo parcial)"; return; }
         s.Packets++;
         s.Bytes += orig;
         if (t is DateTime tt)
@@ -215,8 +218,14 @@ public static class PcapReader
                 s.DnsRcodes[rc] = s.DnsRcodes.GetValueOrDefault(rc) + 1;
             }
             var server = sp < dp ? $"{src}:{sp}/udp" : $"{dst}:{dp}/udp";
-            st.DestBytes[server] = st.DestBytes.GetValueOrDefault(server) + l4Len;
+            Bump(st.DestBytes, server, l4Len);
         }
+    }
+
+    private static void Bump(Dictionary<string, long> d, string k, long v)
+    {
+        if (d.TryGetValue(k, out var cur)) d[k] = cur + v;
+        else if (d.Count < MaxFlows) d[k] = v;
     }
 
     private static void Tcp(State st, string src, string dst, ReadOnlySpan<byte> t, int segLen)
@@ -232,8 +241,9 @@ public static class PcapReader
         var dir = $"{src}:{sp}>{dst}:{dp}";
         var canon = string.CompareOrdinal($"{src}:{sp}", $"{dst}:{dp}") < 0 ? $"{src}:{sp}|{dst}:{dp}" : $"{dst}:{dp}|{src}:{sp}";
         var server = sp < dp ? $"{src}:{sp}" : $"{dst}:{dp}";
-        st.Flows.Add(canon);
-        st.DestBytes[server] = st.DestBytes.GetValueOrDefault(server) + segLen;
+        if (st.Flows.Count < MaxFlows) st.Flows.Add(canon);
+        else if (!st.Flows.Contains(canon)) return;
+        Bump(st.DestBytes, server, segLen);
         if (syn && !ack) { s.Syn++; st.SynFlows.Add(canon); }
         if (syn && ack) { s.SynAck++; st.SynAckFlows.Add(canon); }
         if (rst) s.Resets++;
@@ -241,11 +251,11 @@ public static class PcapReader
         if (payload > 0)
         {
             s.TcpDataSegments++;
-            if (!st.Seqs.TryGetValue(dir, out var set)) { set = new HashSet<(uint, int)>(); st.Seqs[dir] = set; }
+            if (!st.Seqs.TryGetValue(dir, out var set)) { if (st.Seqs.Count >= MaxFlows) return; set = new HashSet<(uint, int)>(); st.Seqs[dir] = set; }
             if (set.Contains((seq, payload)))
             {
                 s.Retransmissions++;
-                st.RetransDest[server] = st.RetransDest.GetValueOrDefault(server) + 1;
+                Bump(st.RetransDest, server, 1);
             }
             else if (set.Count < MaxSeqPerFlow) set.Add((seq, payload));
             if (hl >= 20 && t.Length > hl + 1 && t[hl] == 0x15 && t[hl + 1] == 0x03) s.TlsAlerts++;

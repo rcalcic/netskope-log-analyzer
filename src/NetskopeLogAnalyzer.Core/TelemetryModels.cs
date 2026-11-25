@@ -32,6 +32,8 @@ public sealed class ProcessSample
     public double MemMb { get; set; }
     public double MemPct { get; set; }
     public int Instances { get; set; } = 1;
+    /// <summary>Tempo de CPU acumulado desde que o processo iniciou (ps: coluna TIME), em segundos.</summary>
+    public double CpuTimeSec { get; set; }
 }
 
 public sealed record DiskInfo(string Mount, double? TotalGb, double UsedPct);
@@ -67,6 +69,13 @@ public sealed class Snapshot
     public List<InterfaceInfo> Interfaces { get; } = new();
     public string? DefaultGateway { get; set; }
     public Dictionary<string, string> System { get; } = new();
+    /// <summary>Núcleos lógicos (estimado pelas threads de kernel migration/N no ps).</summary>
+    public int? Cores { get; set; }
+    /// <summary>Horário de início do PID 1 (boot), como o ps mostra (HH:mm ou data).</summary>
+    public string? BootClock { get; set; }
+    public int ProcessCount { get; set; }
+    public double CpuTimeTotalSec { get; set; }
+    public double RssTotalMb { get; set; }
 }
 
 public sealed record Hop(int Ttl, string? Address, double? RttMs, string Segment);
@@ -111,4 +120,6 @@ public sealed class Incident
     public List<EvidenceLine> Evidence { get; } = new();
     public string? FindingKey { get; init; }
     public TimeSpan Duration => End - Start;
+    /// <summary>Acontece perto do horário informado pelo analista.</summary>
+    public bool InFocusWindow { get; set; }
 }

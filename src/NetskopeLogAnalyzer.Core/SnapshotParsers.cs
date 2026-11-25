@@ -61,7 +61,8 @@ public static class SnapshotParsers
         var h = Regex.Match(text, @"^\s*USER\s+PID\s+%CPU\s+%MEM\s+VSZ\s+RSS\b.*$", M);
         if (!h.Success) return false;
         var agg = new Dictionary<string, ProcessSample>(StringComparer.Ordinal);
-        double rssKb = 0, memPct = 0;
+        double rssKb = 0, memPct = 0, bigRss = 0, bigPct = 0, cpuTime = 0;
+        int count = 0, cores = 0;
         foreach (var raw in text[(h.Index + h.Length)..].Split('\n').Skip(1))
         {
             var line = raw.TrimEnd('\r');
@@ -69,14 +70,42 @@ public static class SnapshotParsers
             var c = line.Split((char[]?)null, 11, StringSplitOptions.RemoveEmptyEntries);
             if (c.Length < 11 || Num(c[2]) is not double cpu || Num(c[3]) is not double mem || Num(c[5]) is not double rss) continue;
             var name = ProcName(c[10]);
+            var t = CpuTime(c[9]);
+            count++;
+            if (c[1] == "1") s.BootClock = c[8];
+            if (Regex.IsMatch(c[10], @"^\[migration/\d+\]")) { cores++; continue; }
+            if (c[10].StartsWith('[')) { cpuTime += t; continue; } // threads de kernel: contam só no total
             if (!agg.TryGetValue(name, out var p)) { p = new ProcessSample { Name = name, Instances = 0 }; agg[name] = p; }
-            p.CpuPct += cpu; p.MemPct += mem; p.MemMb += rss / 1024.0; p.Instances++;
-            rssKb += rss; memPct += mem;
+            p.CpuPct += cpu; p.MemPct += mem; p.MemMb += rss / 1024.0; p.Instances++; p.CpuTimeSec += t;
+            rssKb += rss; memPct += mem; cpuTime += t;
+            if (mem >= 0.5) { bigRss += rss; bigPct += mem; }
         }
         if (agg.Count == 0) return false;
         s.Processes.AddRange(agg.Values.OrderByDescending(p => p.CpuPct).ThenByDescending(p => p.MemMb));
-        if (memPct > 1) s.MemTotalMb ??= Math.Round(rssKb / memPct * 100 / 1024.0);
+        // total de RAM estimado pelos processos grandes (o %MEM arredondado dos pequenos distorce a conta)
+        if (bigPct > 2) s.MemTotalMb ??= Math.Round(bigRss / bigPct * 100 / 1024.0);
+        else if (memPct > 1) s.MemTotalMb ??= Math.Round(rssKb / memPct * 100 / 1024.0);
+        s.ProcessCount = count;
+        s.CpuTimeTotalSec = cpuTime;
+        s.RssTotalMb = Math.Round(rssKb / 1024.0);
+        if (cores > 0) s.Cores = cores;
         return true;
+    }
+
+    /// <summary>Coluna TIME do ps: "MMM:SS" (aux) ou "[DD-]HH:MM:SS".</summary>
+    internal static double CpuTime(string v)
+    {
+        var days = 0;
+        var dash = v.IndexOf('-');
+        if (dash > 0 && int.TryParse(v[..dash], NumberStyles.Integer, CultureInfo.InvariantCulture, out var d)) { days = d; v = v[(dash + 1)..]; }
+        var p = v.Split(':');
+        double N(string x) => double.TryParse(x, NumberStyles.Float, CultureInfo.InvariantCulture, out var r) ? r : 0;
+        return p.Length switch
+        {
+            2 => N(p[0]) * 60 + N(p[1]),
+            3 => N(p[0]) * 3600 + N(p[1]) * 60 + N(p[2]),
+            _ => 0,
+        } + days * 86400;
     }
 
     // Nome da imagem  PID Nome da sessão  Sessão#  Uso de memória

@@ -376,9 +376,11 @@ public static class KnowledgeBase
         string Sub(string t, ClientOs? osForCmd)
         {
             var nsd = NsdiagPath(osForCmd ?? ClientOs.Linux);
-            var delif = f.Interfaces.Count > 0 ? string.Join("\n", f.Interfaces.Select(i => "sudo ip link delete " + i)) : "sudo ip link delete <interface>";
-            var missing = f.MissingPackages.Count > 0 ? string.Join(" ", f.MissingPackages) : "<pacotes>";
-            return t.Replace("{NSD}", nsd).Replace("{T}", tenantHost ?? "<tenant>").Replace("{DELIF}", delif).Replace("{MISSING}", missing);
+            // valores vindos do log entram nos comandos só se forem identificadores simples (evita injeção de comando)
+            var delif = f.Interfaces.Count > 0 ? string.Join("\n", f.Interfaces.Select(i => "sudo ip link delete " + SafeText.Token(i, "<interface>")).Distinct()) : "sudo ip link delete <interface>";
+            var missing = f.MissingPackages.Count > 0 ? string.Join(" ", f.MissingPackages.Select(p => SafeText.Token(p, "<pacote>")).Distinct()) : "<pacotes>";
+            var tenant = tenantHost is null ? "<tenant>" : SafeText.Host(tenantHost, "<tenant>");
+            return t.Replace("{NSD}", nsd).Replace("{T}", tenant).Replace("{DELIF}", delif).Replace("{MISSING}", missing);
         }
         return steps.Select(s =>
         {

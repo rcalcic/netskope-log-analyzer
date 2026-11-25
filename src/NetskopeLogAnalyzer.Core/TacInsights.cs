@@ -366,7 +366,7 @@ public sealed class TacInsights
             f.Steps.Add(new("Veja DNS e domínio de pesquisa por interface:", "resolvectl status"));
             f.Steps.Add(new("Liste as conexões do NetworkManager (as de VPN antiga costumam ter o nome da interface):", "nmcli -f NAME,TYPE,DEVICE,STATE connection show"));
             if (vpnCarriers.Count > 0)
-                f.Steps.Add(new("Remova as conexões das interfaces de VPN que ficaram para trás:", string.Join("\n", vpnCarriers.Select(c => $"sudo nmcli connection delete {c.Interface}"))));
+                f.Steps.Add(new("Remova as conexões das interfaces de VPN que ficaram para trás:", string.Join("\n", vpnCarriers.Select(c => $"sudo nmcli connection delete {SafeText.Token(c.Interface, "<nome-da-conexão>")}"))));
             f.Steps.Add(new("Ou retire só o domínio de pesquisa de uma interface:", "sudo resolvectl domain <interface> \"\""));
             f.Steps.Add(new("Limpe o cache e teste um nome público (não deve aparecer consulta com o sufixo):", "sudo resolvectl flush-caches\nresolvectl query gateway.gslb.goskope.com"));
         }
@@ -444,7 +444,7 @@ public sealed class TacInsights
             f.Steps.Add(new("Aplique e recrie as redes dos projetos (docker compose down/up):", "sudo systemctl restart docker\ndocker network ls\ndocker network prune"));
         }
         if (hits.Any(h => h.Kind == "VPN de terceiros"))
-            f.Steps.Add(new("Remova as interfaces de VPN de terceiros que ficaram configuradas (ou desinstale a VPN antiga):", string.Join("\n", hits.Where(h => h.Kind == "VPN de terceiros").Select(h => h.If).Distinct().Select(n => "sudo ip link delete " + n))));
+            f.Steps.Add(new("Remova as interfaces de VPN de terceiros que ficaram configuradas (ou desinstale a VPN antiga):", string.Join("\n", hits.Where(h => h.Kind == "VPN de terceiros").Select(h => h.If).Distinct().Select(n => "sudo ip link delete " + SafeText.Token(n, "<interface>")))));
         if (lan)
             f.Steps.Add(new("A rede local (casa/hotel) usa a mesma faixa de uma aplicação privada: troque a faixa do DHCP do roteador local ou publique a aplicação por nome em vez de faixa de IP."));
         f.Steps.Add(new("Confira as rotas que o Private Access instala:", Os == ClientOs.Linux ? "ip route show table 9" : Os == ClientOs.Windows ? "route print" : "netstat -rn"));
@@ -596,6 +596,9 @@ public sealed class TacInsights
                 var names = Cnt("names"); var ips = Cnt("ips"); var doms = Cnt("domains");
                 if (names + ips + doms == 0) continue;
                 var priv = p.Value.TryGetProperty("ips", out var ia) && ia.ValueKind == JsonValueKind.Array && ia.EnumerateArray().Any(x => (Get(x, "value") ?? "").StartsWith("10.0.0.0", StringComparison.Ordinal));
+                if (p.Value.TryGetProperty("names", out var na) && na.ValueKind == JsonValueKind.Array)
+                    foreach (var x in na.EnumerateArray().Take(5000))
+                        if ((x.ValueKind == JsonValueKind.String ? x.GetString() : Get(x, "value")) is string pat && pat.Length > 0) _r.ExceptionPatterns.Add(new(p.Name, pat));
                 Cfg(label, p.Name, $"{names} domínio(s), {ips} IP/faixa(s)" + (doms > 0 ? $", {doms} domínio(s)" : ""),
                     "Destinos que nunca passam pelo túnel neste local." + (priv ? " Inclui as faixas privadas (10/8, 172.16/12, 192.168/16): a rede local vai direto." : ""));
             }
@@ -606,6 +609,9 @@ public sealed class TacInsights
             {
                 if (p.Value.ValueKind != JsonValueKind.Object || !p.Value.TryGetProperty("certPinnedAppList", out var apps) || apps.ValueKind != JsonValueKind.Array || apps.GetArrayLength() == 0) continue;
                 var names = apps.EnumerateArray().Select(a => $"{Get(a, "appName")} ({Get(a, "processName")}, {Get(a, "mode")})").Distinct().Take(8);
+                foreach (var a in apps.EnumerateArray().Take(500))
+                    foreach (var pn in new[] { Get(a, "processName"), Get(a, "appName") })
+                        if (!string.IsNullOrEmpty(pn) && !_r.CertPinnedApps.Contains(pn, StringComparer.OrdinalIgnoreCase)) _r.CertPinnedApps.Add(pn);
                 Cfg("Apps com certificado fixo (cert pinning)", p.Name, string.Join("; ", names), "Processos que ficam fora da inspeção porque não aceitam o certificado do Netskope.");
             }
         }
@@ -984,7 +990,8 @@ public sealed class TacInsights
         var reauth = _r.NpaSessions.Where(s => s.End != null && s.Expected && !s.Stopped).ToList();
         var retry = drops.Where(d => d.FirstRetryAt != null).Select(d => (d.FirstRetryAt!.Value - d.End!.Value).TotalSeconds).OrderBy(x => x).ToList();
         var multi = drops.Count(d => d.Attempts > 1);
-        var days = Math.Max(1, ((_npaLast ?? DateTime.Now) - (_npaFirst ?? DateTime.Now)).TotalDays);
+        var npaSpan = (_npaLast ?? DateTime.Now) - (_npaFirst ?? DateTime.Now);
+        var days = Math.Max(1, npaSpan.TotalDays);
         if (drops.Count > 0)
         {
             var keep = drops.Count(d => d.EndReason!.StartsWith("Gateway parou", StringComparison.Ordinal));
@@ -995,10 +1002,10 @@ public sealed class TacInsights
             var f = new Finding
             {
                 Key = "npadrops", Severity = drops.Count >= 10 || clusters.Count > 0 ? Severity.Critical : drops.Count >= 3 ? Severity.Warning : Severity.Info, Category = "Túnel",
-                Title = $"Private Access caiu {drops.Count} vez(es) em {TelemetryParser.Fmt(TimeSpan.FromDays(days))}" + (keep > 0 ? $" — {keep} por falta de resposta do gateway" : ""),
+                Title = $"Private Access caiu {drops.Count} vez(es) em {TelemetryParser.Fmt(npaSpan)}" + (keep > 0 ? $" — {keep} por falta de resposta do gateway" : ""),
                 Meaning = string.Join(" ", new[]
                 {
-                    $"Média de {drops.Count / days:0.#} queda(s) por dia; pior dia {perDay[0].Key:dd/MM} com {perDay[0].Count()}.",
+                    npaSpan.TotalDays >= 1 ? $"Média de {drops.Count / days:0.#} queda(s) por dia; pior dia {perDay[0].Key:dd/MM} com {perDay[0].Count()}." : $"{drops.Count} queda(s) em {TelemetryParser.Fmt(npaSpan)} de log.",
                     clusters.Count > 0 ? "Quedas em sequência (3 ou mais na mesma hora): " + string.Join("; ", clusters.Take(5).Select(c => $"{c.Start:dd/MM HH:mm}–{c.End:HH:mm} ({c.Count})")) + "." : "",
                     downs.Count > 0 ? $"Tempo sem o túnel em cada queda: mediana {TelemetryParser.Fmt(TimeSpan.FromSeconds(downs[downs.Count / 2]))}, máximo {TelemetryParser.Fmt(TimeSpan.FromSeconds(downs[^1]))}." : "",
                     retry.Count > 0 && retry[retry.Count / 2] >= 90 ? $"O cliente só tenta reconectar cerca de {TelemetryParser.Fmt(TimeSpan.FromSeconds(retry[retry.Count / 2]))} depois da queda (mediana) — boa parte do tempo fora é essa espera, mesmo que a rede volte antes." : "",
@@ -1013,7 +1020,7 @@ public sealed class TacInsights
             foreach (var g in drops.GroupBy(d => d.EndReason!).OrderByDescending(g => g.Count())) f.Details.Add(new(g.Key, g.Count()));
             foreach (var g in perDay.Take(8)) f.Details.Add(new($"dia {g.Key:dd/MM}", g.Count()));
             f.Samples.AddRange(drops.TakeLast(6).Select(d => $"{d.End:dd/MM HH:mm:ss} {d.EndReason} · POP {d.Pop ?? d.GatewayIp ?? "?"}" + (d.Downtime is TimeSpan dt ? $" · voltou em {TelemetryParser.Fmt(dt)}" : "")));
-            var gwIp = drops.Last().GatewayIp ?? "gateway.npa.goskope.com";
+            var gwIp = SafeText.Host(drops.Last().GatewayIp, "gateway.npa.goskope.com");
             f.Steps.Add(new("Abra a aba Rede: para cada queda há o motivo, o POP e o tempo até reconectar; e os gráficos de RTT e retransmissões do túnel mostram se o caminho até o POP degradou antes."));
             f.Steps.Add(new("Se as quedas coincidirem com falhas de GSLB/tenant (Incidentes), o problema é a Internet da máquina: verifique Wi-Fi e roteador no mesmo horário."));
             if (Os == ClientOs.Windows)
@@ -1136,8 +1143,124 @@ public sealed class TacInsights
 
     public void Finish()
     {
+        Resources();
         Performance();
         CaseSummary();
+    }
+
+    // ---------------------------------------------------------------- baseline de recursos (foto do pacote)
+
+    public const string ResourceGroup = "Recursos da máquina";
+
+    private static DateTime? BootFrom(string? clock, DateTime at)
+    {
+        if (string.IsNullOrEmpty(clock)) return null;
+        if (TimeSpan.TryParseExact(clock, @"hh\:mm", CultureInfo.InvariantCulture, out var hm))
+        {
+            var b = at.Date + hm;
+            return b > at ? b.AddDays(-1) : b;
+        }
+        // "Nov23" / "nov23" (ps quando o processo começou em outro dia)
+        var m = Regex.Match(clock, @"^([A-Za-z]{3})(\d{1,2})$");
+        if (m.Success && DateTime.TryParseExact(m.Groups[1].Value + " " + m.Groups[2].Value + " " + at.Year, "MMM d yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var d))
+            return d > at ? d.AddYears(-1) : d;
+        if (int.TryParse(clock, out var y) && y > 2000 && y <= at.Year) return new DateTime(y, 1, 1);
+        return null;
+    }
+
+    private void Resources()
+    {
+        var r = _r;
+        string N(double v, string f = "0.#") => v.ToString(f, CultureInfo.GetCultureInfo("pt-BR"));
+        void R(string name, string value, string reference, string status, string meaning) => r.Performance.Add(new PerfMetric(ResourceGroup, name, value, reference, status, meaning));
+
+        var ps = r.Snapshots.Where(s => !s.Source.Contains("coletor", StringComparison.OrdinalIgnoreCase) && s.Processes.Count > 0).OrderByDescending(s => s.Processes.Count).FirstOrDefault();
+        var mem = r.Snapshots.FirstOrDefault(s => s.MemAvailMb != null && s.MemTotalMb != null);
+        var at = ps?.Time ?? _svcLast ?? _npaLast ?? r.End ?? DateTime.Now;
+        var issues = new List<string>();
+
+        if (ps != null)
+        {
+            var boot = BootFrom(ps.BootClock, at);
+            if (boot is null && ps.System.TryGetValue("Último boot", out var lb) && DateTime.TryParse(lb, CultureInfo.GetCultureInfo("pt-BR"), DateTimeStyles.None, out var wb)) boot = wb;
+            var uptime = boot is DateTime bt ? at - bt : (TimeSpan?)null;
+            if (uptime is TimeSpan up && up.TotalMinutes > 0)
+                R("Tempo ligado (desde o boot)", TelemetryParser.Fmt(up) + (boot is DateTime b0 ? $" (boot {b0:dd/MM HH:mm})" : ""), "—", up.TotalDays >= 14 ? "atenção" : "—",
+                    up.TotalDays >= 14 ? "Máquina sem reiniciar há muito tempo: vazamentos de memória e drivers presos são mais prováveis. Peça um reinício antes de aprofundar." : "Desde quando a máquina está ligada nesta foto.");
+            if (ps.Cores is int cores) R("Núcleos de CPU (lógicos)", cores.ToString(CultureInfo.InvariantCulture), "—", "—", "Estimado pelas threads de kernel por núcleo (migration/N).");
+            if (uptime is TimeSpan up2 && up2.TotalMinutes >= 5 && ps.Cores is int c2 && ps.CpuTimeTotalSec > 0)
+            {
+                var avg = 100 * ps.CpuTimeTotalSec / (up2.TotalSeconds * c2);
+                var st = St(avg, 40, 70);
+                if (st != "bom") issues.Add($"CPU média de {N(avg, "0")}% desde o boot");
+                R("CPU média desde o boot (máquina toda)", $"{N(avg, "0")}% de {c2} núcleos", "< 40%", st,
+                    "Soma do tempo de CPU de todos os processos dividida pelo tempo ligado e pelo número de núcleos. Acima de 40% em notebook de escritório indica carga contínua (EDR, indexação, navegador, VMs).");
+                var top = ps.Processes.Where(p => p.CpuTimeSec > 0).OrderByDescending(p => p.CpuTimeSec).Take(5).ToList();
+                if (top.Count > 0)
+                {
+                    var share = 100 * top[0].CpuTimeSec / ps.CpuTimeTotalSec;
+                    R("Quem mais usou CPU desde o boot", string.Join(" · ", top.Select(p => $"{p.Name} {N(100 * p.CpuTimeSec / ps.CpuTimeTotalSec, "0")}%")), "nenhum acima de 40%", St(share, 40, 60),
+                        "Participação de cada processo em todo o tempo de CPU consumido desde o boot. Um processo dominante (antivírus/EDR, indexador, navegador) é o primeiro suspeito de lentidão.");
+                    if (share >= 40) issues.Add($"{top[0].Name} usou {N(share, "0")}% de todo o tempo de CPU");
+                }
+            }
+            if (ps.ProcessCount > 0) R("Processos em execução", ps.ProcessCount.ToString(CultureInfo.InvariantCulture), "< 600", St(ps.ProcessCount, 600, 1000), "Quantidade de processos e threads de kernel na foto.");
+            var topMem = ps.Processes.OrderByDescending(p => p.MemMb).Take(5).ToList();
+            if (topMem.Count > 0 && topMem[0].MemMb > 0)
+                R("Maiores consumidores de memória", string.Join(" · ", topMem.Select(p => $"{p.Name} {N(p.MemMb / 1024, "0.0")} GB" + (p.Instances > 1 ? $" ({p.Instances})" : ""))), "—", "—", "Memória residente somada por programa (navegadores somam todas as abas).");
+            var browsers = ps.Processes.Where(p => Regex.IsMatch(p.Name, "^(chrome|chromium|msedge|firefox|brave|opera|safari)", RegexOptions.IgnoreCase)).ToList();
+            if (browsers.Count > 0)
+                R("Navegadores", string.Join(" · ", browsers.Select(b => $"{b.Name}: {b.Instances} processo(s), {N(b.MemMb / 1024, "0.0")} GB")), "—", "—", "Muitos processos indicam muitas abas/extensões abertas.");
+        }
+        var total = mem?.MemTotalMb ?? ps?.MemTotalMb;
+        if (total is double tm && tm > 0)
+        {
+            double usedPct; string how;
+            if (mem?.MemAvailMb is double av) { usedPct = 100 * (tm - av) / tm; how = "medida pelo sistema (memória disponível)"; }
+            else if (ps != null && ps.RssTotalMb > 0) { usedPct = Math.Min(100, 100 * ps.RssTotalMb / tm); how = "estimada pela soma da memória dos processos (pode superestimar memória compartilhada)"; }
+            else { usedPct = double.NaN; how = ""; }
+            R("Memória total", $"{N(tm / 1024, "0.#")} GB", "—", "—", mem?.MemAvailMb != null ? "Informada pelo sistema." : "Estimada pelo ps (RSS ÷ %MEM).");
+            if (!double.IsNaN(usedPct))
+            {
+                var st = St(usedPct, 80, 92);
+                if (st != "bom") issues.Add($"memória em {N(usedPct, "0")}%");
+                R("Memória em uso", $"{N(usedPct, "0")}%", "< 80%", st, "Quanto da RAM estava ocupada na foto — " + how + ". Acima de 90% a máquina passa a usar swap e fica lenta.");
+            }
+        }
+        foreach (var s in r.Snapshots)
+            foreach (var d in s.Disks)
+            {
+                var st = St(d.UsedPct, 85, 95);
+                if (st != "bom") issues.Add($"disco {d.Mount} {N(d.UsedPct, "0")}% ocupado");
+                R($"Disco {d.Mount}", $"{N(d.UsedPct, "0")}% ocupado" + (d.TotalGb is double g ? $" de {N(g, "0")} GB" : ""), "< 85%", st, "Disco quase cheio deixa a máquina lenta e impede atualizações e logs.");
+            }
+
+        if (issues.Count > 0)
+        {
+            var f = new Finding
+            {
+                Key = "resources", Severity = issues.Any(i => i.Contains("memória") || i.StartsWith("CPU média", StringComparison.Ordinal)) ? Severity.Warning : Severity.Info, Category = "Dispositivo",
+                Title = "Recursos da máquina sob pressão: " + string.Join("; ", issues.Take(3)),
+                Meaning = "Na foto de recursos do pacote (" + (ps?.Source ?? mem?.Source ?? "snapshot") + "): " + string.Join("; ", issues) + ". Lentidão percebida pelo usuário pode vir da máquina, não do Netskope.",
+                Action = "Confirme o consumo com o usuário e trate o processo/recurso dominante.",
+                Count = issues.Count,
+            };
+            if (Os == ClientOs.Windows)
+            {
+                f.Steps.Add(new("Veja ao vivo os maiores consumidores:", "Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 Name,CPU,@{n='MemMB';e={[int]($_.WorkingSet64/1MB)}}"));
+                f.Steps.Add(new("Memória e tempo ligado:", "systeminfo | findstr /i \"Memória Memory Boot Inicialização\""));
+            }
+            else if (Os == ClientOs.Mac)
+                f.Steps.Add(new("Veja ao vivo os maiores consumidores:", "top -o cpu -n 10 -l 2 | tail -15"));
+            else
+            {
+                f.Steps.Add(new("Veja ao vivo os maiores consumidores:", "top -b -n 2 -d 5 -o %CPU | head -25"));
+                f.Steps.Add(new("Memória, swap e tempo ligado:", "free -h; uptime"));
+            }
+            f.Steps.Add(new("Se for EDR/antivírus, revise exclusões para o Netskope Client; se for navegador, feche abas/extensões pesadas; se a máquina não reinicia há dias, reinicie."));
+            f.SearchQuery = "high cpu memory endpoint netskope client slow";
+            r.Findings.Add(f);
+        }
     }
 
     private static double Pct(List<double> sorted, double q)
@@ -1163,17 +1286,10 @@ public sealed class TacInsights
         var snap = r.Snapshots.Where(s => !s.Source.Contains("coletor", StringComparison.OrdinalIgnoreCase) && s.Processes.Any(p => p.CpuPct > 0)).OrderByDescending(s => s.Processes.Count).FirstOrDefault();
         if (snap != null)
         {
-            var top = snap.Processes.Where(p => !NetskopeProcRe.IsMatch(p.Name)).OrderByDescending(p => p.CpuPct).Take(3).ToList();
-            if (top.Count > 0)
-                P(MetricCatalog.Device, "Processos que mais usam CPU (média desde o início)", string.Join(" · ", top.Select(p => $"{p.Name} {N(p.CpuPct)}%")),
-                    "< 25% de um núcleo", St(top[0].CpuPct, 25, 80), "Valor do ps: % de UM núcleo, média desde que o processo iniciou. Mostra quem disputa CPU com o túnel e as aplicações.");
             var ns = snap.Processes.Where(p => NetskopeProcRe.IsMatch(p.Name)).ToList();
             if (ns.Count > 0)
                 P("Netskope", "Consumo do próprio Netskope Client", $"CPU {N(ns.Sum(p => p.CpuPct))}% · memória {N(ns.Sum(p => p.MemMb), "0")} MB", "< 10% · < 500 MB",
                     St(ns.Sum(p => p.CpuPct), 10, 40), "Processos stAgent*/nsdiag/npa. Valores altos indicam laço de reconexão ou volume muito alto de tráfego inspecionado.");
-            var memPct = snap.Processes.Sum(p => p.MemPct);
-            if (memPct > 1 && snap.MemTotalMb is double mt)
-                P(MetricCatalog.Device, "Memória usada pelos processos", $"{N(memPct, "0")}% de ~{N(mt / 1024, "0.#")} GB", "< 85%", St(memPct, 85, 95), "Soma da memória residente (RSS) da foto de processos.");
         }
         if (S("perf.sched") is MetricSeries sch)
         {
@@ -1224,8 +1340,10 @@ public sealed class TacInsights
         var drops = r.NpaSessions.Where(s => s.End != null && !s.Expected).ToList();
         if (r.NpaSessions.Count > 0)
         {
-            var days = Math.Max(1, ((_npaLast ?? DateTime.Now) - (_npaFirst ?? DateTime.Now)).TotalDays);
-            P("Netskope", "Quedas do Private Access", $"{drops.Count} ({N(drops.Count / days, "0.#")} por dia)", "0", St(drops.Count / days, 0.5, 2), "Quedas não programadas (reautenticação fica de fora).");
+            var span = (_npaLast ?? DateTime.Now) - (_npaFirst ?? DateTime.Now);
+            var days = Math.Max(1, span.TotalDays);
+            P("Netskope", "Quedas do Private Access", span.TotalDays >= 1 ? $"{drops.Count} ({N(drops.Count / days, "0.#")} por dia)" : $"{drops.Count} em {TelemetryParser.Fmt(span)}", "0",
+                span.TotalDays >= 1 ? St(drops.Count / days, 0.5, 2) : St(drops.Count, 1, 3), "Quedas não programadas (reautenticação fica de fora).");
             var dt = drops.Where(d => d.Downtime != null).Select(d => d.Downtime!.Value.TotalSeconds).ToList();
             if (dt.Count > 0) P("Netskope", "Tempo até reconectar o Private Access", $"mediana {TelemetryParser.Fmt(TimeSpan.FromSeconds(Median(dt)))} · máx. {TelemetryParser.Fmt(TimeSpan.FromSeconds(dt.Max()))}", "≤ 30 s", St(Median(dt), 30, 120), "Tempo sem acesso às aplicações privadas em cada queda.");
         }
