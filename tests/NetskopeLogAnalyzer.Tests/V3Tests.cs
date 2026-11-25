@@ -101,7 +101,7 @@ public class V3Tests
     {
         var r = Run(false);
         Assert.False(r.HasTelemetry);
-        Assert.Contains(r.DataGaps, g => g.Contains("coletor"));
+        Assert.Contains(r.DataGaps, g => g.Contains("não traz séries contínuas"));
         Assert.NotNull(r.Score); // ainda há score parcial (Netskope + latência até o POP)
     }
 
