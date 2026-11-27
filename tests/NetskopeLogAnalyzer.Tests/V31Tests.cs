@@ -236,7 +236,7 @@ public class V31Tests
         var r = Run(("nsAppUI.log", sb.ToString()));
         var f = r.Findings.First(x => x.Key == "http");
         Assert.Equal(Severity.Noise, f.Severity);
-        Assert.Contains("notificação", f.Title, StringComparison.Ordinal);
+        Assert.Contains("notificações", f.Title, StringComparison.Ordinal);
     }
 
     // ---------------------------------------------------------------- captura sintética
