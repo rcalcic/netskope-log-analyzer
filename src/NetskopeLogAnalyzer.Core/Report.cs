@@ -18,8 +18,10 @@ public static class Report
     public static string Verdict(AnalysisResult r)
     {
         int c = r.Count(Severity.Critical), w = r.Count(Severity.Warning);
+        int hc = r.CountHistorical(Severity.Critical);
         if (c > 0) return c == 1 ? "1 problema crítico encontrado" : $"{c} problemas críticos encontrados";
-        if (w > 0) return w == 1 ? "Sem falhas críticas, 1 ponto de atenção" : $"Sem falhas críticas, {w} pontos de atenção";
+        if (w > 0) return (w == 1 ? "Sem falhas críticas recentes, 1 ponto de atenção" : $"Sem falhas críticas recentes, {w} pontos de atenção");
+        if (hc > 0) return "Nenhum problema recente — só falhas antigas no histórico";
         return "Nenhum problema relevante encontrado";
     }
 
@@ -33,6 +35,8 @@ public static class Report
         var who = string.Join(" · ", r.Identity.Where(i => i.Label is "E-mail registrado no Netskope" or "Login no sistema operacional").Select(i => i.Value));
         if (who.Length > 0) sb.AppendLine($"Usuário: {who}");
         sb.AppendLine($"Resultado: {Verdict(r)} ({r.Count(Severity.Critical)} crítico(s), {r.Count(Severity.Warning)} de atenção, {r.Count(Severity.Info)} informativo(s), {r.Count(Severity.Noise)} ruído(s) conhecido(s)).");
+        var hist = r.Findings.Count(f => f.Historical);
+        if (hist > 0) sb.AppendLine($"Histórico: {hist} item(ns) só ocorreram mais de 24 h antes de {Time(r.ReferenceTime)} e não entram no resultado.");
         if (r.Score is double sc) sb.AppendLine($"Experience Score: {sc:0}/100 ({ExperienceScore.Band(sc)}) em {r.Scores.Count} janelas de 5 min.");
         foreach (var (svc, av) in r.Availability) sb.AppendLine($"Disponibilidade {svc}: {av:0.#}% do tempo conectado.");
         if (!r.HasTelemetry) sb.AppendLine("Observação: o pacote de logs não traz séries contínuas de CPU, memória, disco e Wi-Fi (só a foto do momento da coleta).");
@@ -47,6 +51,21 @@ public static class Report
             {
                 sb.AppendLine($"**{g.Key}**");
                 foreach (var i in g) sb.AppendLine($"- {i.Label}: {i.Value.Replace("\n", "; ")} _({i.Source})_");
+            }
+            sb.AppendLine();
+        }
+        if (r.History is { } h)
+        {
+            sb.AppendLine($"## Comparado com o pacote anterior desta máquina ({Time(h.Previous.End)}, analisado em {h.Previous.AnalyzedAt:dd/MM/yyyy HH:mm})");
+            foreach (var c in h.Changes) sb.AppendLine("- " + c);
+            if (h.New.Count > 0) sb.AppendLine("- Novos: " + string.Join("; ", h.New));
+            if (h.Resolved.Count > 0) sb.AppendLine("- Sumiram: " + string.Join("; ", h.Resolved));
+            if (h.Persistent.Count > 0) sb.AppendLine("- Continuam: " + string.Join("; ", h.Persistent));
+            if (h.Machine.Count > 1)
+            {
+                sb.AppendLine("- Análises anteriores desta máquina:");
+                foreach (var e in h.Machine.Take(10))
+                    sb.AppendLine($"  - logs até {Time(e.End)} · v{e.Version ?? "?"} · {e.Verdict} · {e.Packages}");
             }
             sb.AppendLine();
         }
@@ -148,9 +167,9 @@ public static class Report
             sb.AppendLine();
         }
 
-        foreach (var f in r.Findings.Where(f => f.Severity != Severity.Noise))
+        foreach (var f in r.Findings.Where(f => f.Severity != Severity.Noise).OrderBy(f => f.Historical))
         {
-            sb.AppendLine($"## [{SeverityLabel(f.Severity)}] {f.Title} ({f.Count}x)");
+            sb.AppendLine($"## [{SeverityLabel(f.Severity)}{(f.Historical ? " · histórico" : "")}] {f.Title} ({f.Count}x)");
             if (f.First != null) sb.AppendLine($"Período: {Time(f.First)} → {Time(f.Last)}");
             sb.AppendLine("O que significa: " + f.Meaning);
             sb.AppendLine("Como resolver:");

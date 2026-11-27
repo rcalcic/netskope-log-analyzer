@@ -247,7 +247,7 @@ public partial class MainWindow : Window
         }
         left.Children.Add(counts);
 
-        var top = r.Findings.Where(f => f.Severity <= Severity.Warning).Take(6).ToList();
+        var top = r.Findings.Where(f => f.Severity <= Severity.Warning && !f.Historical).Take(6).ToList();
         if (top.Count > 0)
         {
             left.Children.Add(T("Principais pontos", 18, FontWeights.Bold, margin: new Thickness(0, 22, 0, 6)));
@@ -469,6 +469,8 @@ public partial class MainWindow : Window
             ("problems", $"Problemas ({c + w})"), ("crit", $"Crítico ({c})"), ("warn", $"Atenção ({w})"),
             ("info", $"Informativo ({r.Count(Severity.Info)})"), ("noise", $"Ruído conhecido ({r.Count(Severity.Noise)})"), ("all", $"Todos ({r.Findings.Count})"),
         };
+        var hist = r.Findings.Count(f => f.Historical);
+        if (hist > 0) opts = opts.Take(opts.Length - 1).Append(("hist", $"Histórico ({hist})")).Concat(opts.Skip(opts.Length - 1)).ToArray();
         var focused = r.Findings.Count(f => f.FocusTags.Count > 0);
         if (focused > 0) opts = opts.Prepend(("focus", $"◎ Relato do usuário ({focused})")).ToArray();
         foreach (var (key, label) in opts)
@@ -482,9 +484,10 @@ public partial class MainWindow : Window
 
     private bool PassesFilter(Finding f) => _filter switch
     {
-        "problems" => f.Severity <= Severity.Warning,
-        "crit" => f.Severity == Severity.Critical,
-        "warn" => f.Severity == Severity.Warning,
+        "problems" => f.Severity <= Severity.Warning && !f.Historical,
+        "crit" => f.Severity == Severity.Critical && !f.Historical,
+        "warn" => f.Severity == Severity.Warning && !f.Historical,
+        "hist" => f.Historical,
         "info" => f.Severity == Severity.Info,
         "noise" => f.Severity == Severity.Noise,
         "focus" => f.FocusTags.Count > 0,
@@ -495,7 +498,7 @@ public partial class MainWindow : Window
     {
         FindingsPanel.Children.Clear();
         // itens ligados ao relato do usuário (sintomas marcados) aparecem primeiro, mantendo a ordem de gravidade
-        var list = _result!.Findings.Where(PassesFilter).OrderBy(f => f.FocusTags.Count > 0 ? 0 : 1).ThenBy(f => f.Severity).ThenByDescending(f => f.Count).ToList();
+        var list = _result!.Findings.Where(PassesFilter).OrderBy(f => f.FocusTags.Count > 0 ? 0 : 1).ThenBy(f => f.Historical).ThenBy(f => f.Severity).ThenByDescending(f => f.Count).ToList();
         if (list.Count == 0)
         {
             FindingsPanel.Children.Add(new Border { Background = GreenBg, CornerRadius = new CornerRadius(14), Padding = new Thickness(20), Child = T("Nada nesta categoria.", 15, FontWeights.SemiBold, Green) });
@@ -536,6 +539,7 @@ public partial class MainWindow : Window
         var hl = new StackPanel();
         var tags = new StackPanel { Orientation = Orientation.Horizontal };
         tags.Children.Add(Pill(Report.SeverityLabel(f.Severity), fg, bg));
+        if (f.Historical) tags.Children.Add(Pill("histórico · mais de 24 h antes", Mute, Soft));
         tags.Children.Add(T(f.Category, 12, fg: Mute, wrap: false));
         foreach (var tag in f.FocusTags.Take(3)) tags.Children.Add(Pill("◎ " + tag, Theme.OnAccent, Theme.Accent));
         hl.Children.Add(tags);

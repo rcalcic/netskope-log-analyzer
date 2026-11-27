@@ -1378,7 +1378,7 @@ public sealed class TacInsights
         void Q(string q, string? a) { if (!string.IsNullOrWhiteSpace(a)) r.CaseSummary.Add(new(q, a)); }
 
         var main = r.Incidents.Where(i => i.Severity <= Severity.Warning).OrderBy(i => i.Severity).ThenByDescending(i => i.Duration).FirstOrDefault();
-        var topFinding = r.Findings.FirstOrDefault(f => f.Severity <= Severity.Warning);
+        var topFinding = r.Findings.FirstOrDefault(f => f.Severity <= Severity.Warning && !f.Historical);
         Q("Qual é o sintoma principal?", main != null ? $"{main.Title} ({main.Start:dd/MM HH:mm}, {TelemetryParser.Fmt(main.Duration)})" + (main.Causes.FirstOrDefault() is Cause c ? $" — causa provável: {c.Title.ToLowerInvariant()} ({c.Confidence:0}%)." : ".")
             : topFinding?.Title ?? "Nenhum problema relevante encontrado.");
 

@@ -11,6 +11,7 @@ if (args.Length == 0)
 }
 // opções: --sintomas lentidao,dns  --site exemplo.com  --horario "23/11/2026 12:44"
 var opts = new AnalysisOptions();
+string? history = null; // --historico arquivo.json: compara com análises anteriores da mesma máquina
 var files = new List<string>();
 for (var i = 0; i < args.Length; i++)
 {
@@ -20,6 +21,7 @@ for (var i = 0; i < args.Length; i++)
             foreach (var s in args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) opts.Symptoms.Add(s);
             break;
         case "--site" when i + 1 < args.Length: opts.Domain = args[++i]; break;
+        case "--historico" when i + 1 < args.Length: history = args[++i]; break;
         case "--horario" when i + 1 < args.Length:
             if (DateTime.TryParse(args[++i], System.Globalization.CultureInfo.GetCultureInfo("pt-BR"), System.Globalization.DateTimeStyles.None, out var t)) opts.ProblemTime = t;
             break;
@@ -28,6 +30,7 @@ for (var i = 0; i < args.Length; i++)
 }
 var sw = Stopwatch.StartNew();
 var r = new Analyzer { Options = opts }.AnalyzePaths(files);
+if (history != null) r.History = new HistoryStore(history).Record(HistoryStore.From(r, string.Join(", ", files.Select(Path.GetFileName))));
 Console.WriteLine(Report.ToMarkdown(r));
 Console.WriteLine();
 Console.WriteLine("## Diagnóstico da ferramenta");
@@ -38,5 +41,6 @@ foreach (var c in r.Captures) Console.WriteLine($"  - captura {c.File}: {c.LinkT
 foreach (var d in r.DnsInterfaces) Console.WriteLine($"  - dns {d.Interface} [{d.State}] {string.Join(",", d.Servers)} search={string.Join(",", d.Search)} {d.Note}");
 foreach (var f in r.Findings.Where(f => f.Severity == Severity.Noise)) Console.WriteLine($"  - ruído: {f.Title} ({f.Count})");
 foreach (var g in r.DataGaps) Console.WriteLine($"  - lacuna: {g}");
+foreach (var u in r.Unclassified.OrderByDescending(u => u.Count).Take(40)) Console.WriteLine($"  - não classificado [{u.Level}] {u.Count}x: {u.Key}");
 foreach (var c in r.Config) Console.WriteLine($"  - cfg {c.Section} › {c.Item} = {c.Value}{(c.Attention ? " [!]" : "")}");
 return 0;

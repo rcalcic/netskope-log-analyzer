@@ -23,6 +23,7 @@ public sealed class Analyzer
     private static readonly Regex EgressRe = new(@"egress_ip""?\s*[:=]\s*""?([\d.]+)", Opt);
     private static readonly Regex PopNameRe = new(@"""name"":""([^""]+)""", Opt);
     private static readonly Regex DestIpRe = new(@"dest IP: (\S+)", Opt);
+    private static readonly Regex PopLike = new(@"^(?:[a-z]{3}\d{1,2}|backup.*)$", Opt | RegexOptions.IgnoreCase);
     private static readonly Regex TenantRe = new(@"(?:addon|achecker|gateway|download|nsauth|aproxy)-([a-z0-9]+(?:\.(?:eu|de|au))?)\.goskope\.com", Opt | RegexOptions.IgnoreCase);
 
     // métricas extraídas dos logs do Netskope Client
@@ -207,6 +208,9 @@ public sealed class Analyzer
                 continue;
             }
             if (SkipExt.IsMatch(baseName)) { _r.Skipped.Add(baseName); continue; }
+            // o mesmo arquivo em dois pacotes (logs rotacionados repetidos) é lido uma vez só
+            var digest = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(it.Data));
+            if (!_fileDigests.Add(digest)) { _duplicateFiles++; continue; }
             progress?.Report($"Analisando {baseName} ({n}/{items.Count})…");
             var text = Decode(it.Data);
             if (text is null) { _r.Skipped.Add(baseName); continue; }
@@ -246,6 +250,8 @@ public sealed class Analyzer
             }
         }
 
+        if (_duplicateFiles + _duplicateLines > 0)
+            _r.DataGaps.Add($"Pacotes com conteúdo repetido: {_duplicateFiles} arquivo(s) idêntico(s) e {_duplicateLines:N0} linha(s) repetida(s) foram contados uma vez só.");
         if (_skippedLines > 0) _r.DataGaps.Add($"{_skippedLines} linha(s) ignorada(s) por formato anômalo (proteção contra entrada maliciosa).");
         DeriveFacts();
         BuildFindings();
@@ -319,6 +325,7 @@ public sealed class Analyzer
     private void ParseLog(int fi, string text)
     {
         var file = _r.Files[fi];
+        var family = Family(file.Name);
         using var reader = new StringReader(text);
         string? line;
         while ((line = reader.ReadLine()) != null)
@@ -331,12 +338,38 @@ public sealed class Analyzer
                     _r.DataGaps.Add($"Limite de linhas atingido ({InputLimits.MaxEntries:N0}): o restante dos logs não foi analisado.");
                 break;
             }
+            if (SeenLine(family, line)) continue;
             try { ParseLine(fi, file, line); }
             catch (RegexMatchTimeoutException) { _skippedLines++; }
         }
     }
 
-    private int _skippedLines;
+    private int _skippedLines, _duplicateFiles, _duplicateLines;
+    private readonly HashSet<string> _fileDigests = new(StringComparer.Ordinal);
+    private readonly HashSet<ulong> _lineKeys = new();
+
+    /// <summary>
+    /// Linhas com data idênticas no mesmo tipo de log (ex.: o mesmo nsdebuglog dentro de dois pacotes da mesma máquina)
+    /// contam uma vez só — abrir vários pacotes junta o período sem duplicar as contagens.
+    /// </summary>
+    private bool SeenLine(string family, string line)
+    {
+        if (line.Length < 20 || !(char.IsDigit(line[0]) || line[0] == '[')) return false;
+        ulong h1 = 14695981039346656037UL;
+        foreach (var ch in family) { h1 ^= ch; h1 *= 1099511628211UL; }
+        foreach (var ch in line) { h1 ^= ch; h1 *= 1099511628211UL; }
+        var key = h1 ^ ((ulong)(uint)line.Length << 32);
+        if (_lineKeys.Count > InputLimits.MaxEntries) return false;
+        if (_lineKeys.Add(key)) return false;
+        _duplicateLines++;
+        return true;
+    }
+
+    private static string Family(string name)
+    {
+        var b = Path.GetFileName(name.Replace('\\', '/')).ToLowerInvariant();
+        return System.Text.RegularExpressions.Regex.Replace(b, @"(\.\d+)?\.log$", "");
+    }
 
     /// <summary>Uma etapa que falhar com dados inesperados não derruba a análise inteira.</summary>
     private void Guard(string stage, Action a)
@@ -384,10 +417,24 @@ public sealed class Analyzer
         }
     }
 
+    private readonly Dictionary<string, (string Req, DateTime Time)> _reqCtx = new();
+    private static readonly Regex ProcRe = new(@"^\S+ \S+ (\S+ p[0-9a-f]+) ", RegexOptions.CultureInvariant);
+    private static string? ProcOf(string line) { var m = ProcRe.Match(line); return m.Success ? m.Groups[1].Value : null; }
+    public const string LongPoll = "Canal de notificações (longpoll)";
+
     private void CollectEvents(LogEntry e, string file)
     {
         var m = e.Message;
         var F = _r.Facts;
+        if (m.Contains("longpoll connection headers", StringComparison.Ordinal) || m.Contains("restapi Downloading ", StringComparison.Ordinal))
+        {
+            if (ProcOf(e.Line) is { } p)
+            {
+                var req = m.Contains("longpoll", StringComparison.Ordinal) ? LongPoll : m[(m.IndexOf("Downloading ", StringComparison.Ordinal) + 12)..].Trim();
+                if (req.Length > 80) req = req[..80];
+                _reqCtx[p] = (req, e.Time);
+            }
+        }
         if (m.Contains("starting ======"))
         {
             var x = StartRe.Match(m);
@@ -443,11 +490,18 @@ public sealed class Analyzer
             if (x.Success) { if (m.Contains("[NPA]")) F.PopNpa = x.Groups[1].Value; else F.PopSwg = x.Groups[1].Value; }
         }
         if (m.Contains("Primary tunnel dest IP")) { var x = DestIpRe.Match(m); if (x.Success) F.GatewayIp = x.Groups[1].Value; }
-        if (F.TenantHost is null && m.Contains("goskope.com")) { var x = TenantRe.Match(m); if (x.Success) F.TenantHost = x.Groups[1].Value.ToLowerInvariant(); }
+        if (F.TenantHost is null && m.Contains("goskope.com"))
+        {
+            // gateway-sao1 / achecker-gru2… são POPs, não o tenant
+            foreach (Match x in TenantRe.Matches(m))
+                if (!PopLike.IsMatch(x.Groups[1].Value)) { F.TenantHost = x.Groups[1].Value.ToLowerInvariant(); break; }
+        }
     }
 
     private void Classify(LogEntry e, LogFileInfo file)
     {
+        // a linha "code 22" é sempre seguida de "Got HTTP response code: N", que é a contada
+        if (e.Message.Contains("code 22, error HTTP response code said error", StringComparison.Ordinal)) return;
         foreach (var r in KnowledgeBase.Rules)
         {
             if (!r.AnyLevel) continue;
@@ -496,10 +550,27 @@ public sealed class Analyzer
             c = c.Trim();
             if (c.Length > 0) h.Details[c] = h.Details.GetValueOrDefault(c) + 1;
         }
+        else if (r.Id == "dnsbypass")
+        {
+            var m = Regex.Match(e.Message, @"uplink server (\S+?),");
+            if (m.Success) { var k = "Servidor DNS " + m.Groups[1].Value; h.Details[k] = h.Details.GetValueOrDefault(k) + 1; }
+        }
+        else if (r.Id == "fltqueue")
+        {
+            var k = "Rajada em " + e.Time.ToString("dd/MM HH:mm", CultureInfo.InvariantCulture);
+            if (h.Details.Count < 400 || h.Details.ContainsKey(k)) h.Details[k] = h.Details.GetValueOrDefault(k) + 1;
+        }
         else if (r.Id == "http")
         {
             var m = r.Re.Match(e.Message);
-            if (m.Groups[1].Success) { var k = "HTTP " + m.Groups[1].Value; h.Details[k] = h.Details.GetValueOrDefault(k) + 1; }
+            if (m.Groups[1].Success)
+            {
+                // qual requisição recebeu o erro: a última aberta pelo mesmo processo nos 10 s anteriores
+                var proc = ProcOf(e.Line);
+                var req = proc != null && _reqCtx.TryGetValue(proc, out var rc) && (e.Time - rc.Time).TotalSeconds <= 10 ? rc.Req : "requisição não identificada";
+                var k = $"{req}: HTTP {m.Groups[1].Value}";
+                h.Details[k] = h.Details.GetValueOrDefault(k) + 1;
+            }
         }
     }
 
@@ -647,6 +718,12 @@ public sealed class Analyzer
                 F.Host ??= Str(l, "host_info", "hostname");
             }
         }
+        // nsconfig.json é a fonte oficial do tenant (gateway-<tenant>.goskope.com)
+        if (_json.TryGetValue("nsconfig.json", out var nc) && Str(nc, "nsgw", "host") is { } gwh)
+        {
+            var gm = Regex.Match(gwh, @"^gateway-([a-z0-9]+(?:\.(?:eu|de|au))?)\.goskope\.com$", RegexOptions.IgnoreCase);
+            if (gm.Success && !PopLike.IsMatch(gm.Groups[1].Value)) F.TenantHost = gm.Groups[1].Value.ToLowerInvariant();
+        }
         if (_json.TryGetValue("nsuser.conf", out var u)) F.FailClose = Str(u, "userConfig", "failCloseStatus");
         if (_json.TryGetValue("nssteering.json", out var s))
         {
@@ -713,10 +790,32 @@ public sealed class Analyzer
             f.Samples.AddRange(h.Samples);
             f.Details.AddRange(h.Details.OrderByDescending(kv => kv.Value));
             f.Times.AddRange(h.Times);
+            if (h.Rule.Id == "http") ShapeHttp(f, h);
             _r.Findings.Add(f);
         }
         _r.Findings.AddRange(_extra);
         _r.Findings.Sort((a, b) => a.Severity != b.Severity ? a.Severity.CompareTo(b.Severity) : b.Count.CompareTo(a.Count));
+    }
+
+    /// <summary>
+    /// 403 no canal de notificações (longpoll da interface) se repete a cada poucos segundos e não afeta o tráfego:
+    /// fica separado das recusas que importam (configuração, GSLB, registro).
+    /// </summary>
+    private static void ShapeHttp(Finding f, RuleHits h)
+    {
+        var lp = h.Details.Where(kv => kv.Key.StartsWith(LongPoll, StringComparison.Ordinal)).Sum(kv => kv.Value);
+        var other = h.Count - lp;
+        if (other == 0)
+        {
+            f.Severity = Severity.Info;
+            f.Category = "Configuração";
+            f.Title = "Canal de notificações do cliente recusado pelo tenant";
+            f.Meaning = "A interface do cliente mantém uma conexão de longa duração (longpoll) para receber avisos do console, e o tenant responde com erro a cada tentativa. Não afeta a navegação nem o Private Access: só as notificações enviadas pelo administrador deixam de aparecer.";
+            return;
+        }
+        f.Title = $"Tenant recusou requisições do cliente ({other}x)" + (lp > 0 ? $" — além de {lp:N0} recusas do canal de notificações" : "");
+        f.Severity = other >= 20 ? Severity.Warning : f.Severity == Severity.Critical ? Severity.Warning : f.Severity;
+        f.Meaning = "O tenant respondeu com erro HTTP a downloads do cliente (veja quais nos detalhes). 403 = usuário/dispositivo não autorizado ou recurso não liberado para ele; 401 = autenticação; 5xx = erro do lado Netskope.";
     }
 
     // ------------------------------------------------------------------ métricas dos logs (v3)
@@ -795,7 +894,20 @@ public sealed class Analyzer
             if (sn.MemTotalMb is double mt) r.Device.TryAdd("Memória total (MB)", mt.ToString("0", CI));
         }
 
-        // latência por POP (medida pelo próprio cliente na seleção de gateway)
+        // latência por POP (medida pelo próprio cliente na seleção de gateway).
+        // Medições só com IP do nó ganham o nome do POP pelo IP exato ou pela mesma /24; o resto é descartado,
+        // para não virar uma série por IP.
+        static string? Net24(string? ip) => ip is null ? null : ip.LastIndexOf('.') is var k && k > 0 ? ip[..k] : null;
+        var byNet = _popNames.GroupBy(kv => Net24(kv.Key)).Where(g => g.Key != null && g.Select(x => x.Value).Distinct().Count() == 1)
+            .ToDictionary(g => g.Key!, g => g.First().Value);
+        for (var i = _rtt.Count - 1; i >= 0; i--)
+        {
+            var x = _rtt[i];
+            if (!System.Net.IPAddress.TryParse(x.Pop, out _)) continue;
+            var name = _popNames.GetValueOrDefault(x.Pop) ?? (Net24(x.Pop) is { } n ? byNet.GetValueOrDefault(n) : null);
+            if (name is null) _rtt.RemoveAt(i);
+            else _rtt[i] = (x.Time, x.Svc, name, x.Ip, x.Rtt);
+        }
         foreach (var g in _rtt.GroupBy(x => (x.Svc, x.Pop)))
         {
             var key = $"pop.rtt:{g.Key.Svc} {g.Key.Pop}";
@@ -887,6 +999,7 @@ public sealed class Analyzer
         if (!r.Snapshots.Any(sn => sn.Processes.Count > 0 || sn.Wifi != null))
             r.DataGaps.Add("O pacote não traz fotos instantâneas de processos ou Wi-Fi (ps aux, tasklist, netsh wlan, nmcli…).");
 
+        Guard("recência", () => FocusAnalyzer.ApplyRecency(r, Options.ProblemTime));
         Guard("baseline", () => Baseline.Compute(r));
         Guard("Experience Score", () => ExperienceScore.Compute(r));
         Guard("causa raiz", () => RootCause.Analyze(r));

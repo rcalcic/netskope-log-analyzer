@@ -285,6 +285,7 @@ public sealed class IdentityCollector
             if (tags is { Length: > 0 }) Set(Machine, "Tags de instalação", tags, "nsconfig.json");
             var gw = S(c, "nsgw", "host");
             var tenant = gw is null ? null : Regex.Match(gw, @"^gateway-(.+?)\.goskope\.com$").Groups[1].Value;
+            if (tenant is { Length: > 0 } && Regex.IsMatch(tenant, @"^[a-z]{3}\d{1,2}$")) tenant = null;
             Set(Netskope, "Tenant", tenant is { Length: > 0 } ? tenant : F.TenantHost, "nsconfig.json");
             Set(Netskope, "Tenant do Private Access", S(c, "npa", "tenant"), "nsconfig.json");
         }

@@ -51,6 +51,21 @@ public static class KnowledgeBase
 
     public static readonly IReadOnlyList<Rule> Rules = new List<Rule>
     {
+        // ---- vistos nos pacotes reais de clientes Linux (precisam vir antes das regras genéricas)
+        R("fltqueue", @"nsFltThread Failed to send data to thread", Severity.Warning, "Desempenho",
+            "Fila do filtro de tráfego cheia — pacotes descartados",
+            "A thread que repassa os pacotes capturados não deu conta (erro 11 = fila cheia). Nesses momentos o Netskope descarta pacotes: páginas ficam lentas, conexões dão timeout e chamadas de vídeo travam. Acontece em rajadas, com muito tráfego de uma vez (sincronização, Docker, chamadas) ou com a CPU ocupada.",
+            "Veja os horários das rajadas, compare com o uso de CPU e com o tráfego da máquina no mesmo minuto, e atualize o cliente.", byCount: ByCount(Severity.Warning, Severity.Critical, 2000), q: "Failed to send data to thread"),
+        R("dnsbypass", @"failed to bypass DNS query to uplink server", Severity.Warning, "DNS",
+            "Consultas DNS não chegaram ao servidor DNS da rede",
+            "O cliente tentou mandar consultas DNS direto ao servidor DNS configurado na máquina e o envio falhou (erro 11 = fila/socket ocupado). Nesses momentos a resolução de nomes falha ou demora.",
+            "Confira o servidor DNS indicado nos detalhes (está acessível a partir da rede atual?) e se ele coincide com rajadas de fila cheia.", q: "failed to bypass DNS query"),
+        R("nopid", @"tunnelPolicyMgr invalid params", Severity.Noise, "Ruído", "Fluxo sem processo identificado",
+            "O cliente recebeu uma conexão sem processo de origem (/proc/0) e não aplicou política por processo; o fluxo segue normalmente.", "Nenhuma."),
+        R("npanotready", @"Dropping packet, not ready!", Severity.Info, "Private Access", "Pacotes do Private Access descartados com o túnel ainda subindo",
+            "Durante a (re)conexão do túnel NPA os pacotes de aplicações privadas são descartados até o túnel ficar pronto.", "Sem ação se coincidir com reconexões do Private Access.", q: "Dropping packet"),
+        R("npanoise", @"Cannot get reauth timing settings|Cannot get status for the tunnel id|The wait call cannot be completed within|RTT getsockopt\(\) received error|Schedule a async function call when dispatcher is stopped", Severity.Noise, "Ruído",
+            "Mensagens internas do módulo NPA", "Avisos internos do Private Access sem efeito para o usuário.", "Nenhuma."),
         R("crash", @"segmentation fault|SIGSEGV|SIGABRT|core dumped|unhandled exception|terminate called|access violation", Severity.Critical, "Estabilidade",
             "Travamento (crash) de processo do Netskope", "Um processo do cliente encerrou de forma anormal.",
             "Veja qual processo travou e o horário; atualize o cliente para a versão mais recente (ou a golden release do tenant) e, se repetir, reinstale.", any: true, ci: true),
@@ -72,7 +87,7 @@ public static class KnowledgeBase
             "Verifique os DNS ativos e remova interfaces de VPN órfãs.", ci: true, byCount: ByCount(Severity.Warning, Severity.Critical, 5), q: "code 6,"),
         R("conn", @"code 7,|Couldn't connect to server|Connection refused|Network is unreachable|No route to host", Severity.Warning, "Conectividade", "Conexão recusada ou rede inalcançável",
             "Não foi possível abrir conexão TCP com o destino.", "Verifique rota padrão, firewall local e outras VPNs.", ci: true, byCount: ByCount(Severity.Warning, Severity.Critical, 10), q: "code 7,"),
-        R("http", @"Got HTTP response code: (4\d\d|5\d\d)|code 22, error HTTP response code said error", Severity.Warning, "Conectividade", "Tenant respondeu com erro HTTP",
+        R("http", @"Got HTTP response code: (4\d\d|5\d\d)", Severity.Warning, "Conectividade", "Tenant respondeu com erro HTTP",
             "O tenant recusou a requisição (403 = usuário/dispositivo não autorizado ou token inválido; 401 = autenticação; 5xx = erro do lado Netskope).",
             "Confirme o provisionamento do usuário; em 403 recorrente, refaça o registro.", q: "HTTP response"),
         R("cfgdl", @"Failed to download (config|admin config|steering|ca cert|tenant cert|exception list)|download (steering config|ca cert|tenant cert) failed|failed to download (admin )?config|mandatory config download failed", Severity.Warning, "Configuração",
@@ -102,6 +117,10 @@ public static class KnowledgeBase
             "O componente que intercepta o tráfego não iniciou; o túnel não captura nada.", "Reinstale o cliente e verifique conflitos com antivírus/EDR.", ci: true),
         R("iptables", @"iptables.*(fail|error)|Failed to (add|set|apply) iptables", Severity.Warning, "Rede", "Falha ao aplicar regras iptables",
             "No Linux o cliente usa iptables para direcionar tráfego; regras não aplicadas impedem a captura.", "Verifique se outro software reescreve as regras.", ci: true),
+        R("sysca", @"copy_file: No such file or directory: ""/usr/local/share/ca-certificates/ns(?:ca|tenant)cert\.crt""|failed to open file for reading: /usr/local/share/ca-certificates/nscacert\.crt", Severity.Warning, "Certificados",
+            "CA do Netskope fora do repositório de certificados do Linux",
+            "O cliente procurou a CA do Netskope em /usr/local/share/ca-certificates e não encontrou. Navegadores baseados em Chromium usam o próprio repositório e costumam funcionar, mas ferramentas que usam o repositório do sistema (curl, git, apt, npm, pip, Python, Docker, Java, aplicativos em Go) dão erro de certificado em sites inspecionados. Se a CA foi instalada por script com outro nome, confira se ela está no bundle do sistema.",
+            "Instale as duas CAs do Netskope no repositório do sistema e aponte as ferramentas para o bundle.", ci: true, q: "nscacert.crt"),
         R("firefox", @"firefox|FF Snap", Severity.Warning, "Certificados", "CA do Netskope não instalada para o Firefox",
             "O cliente não conseguiu copiar a CA para o Firefox (versão snap). Sites inspecionados podem mostrar erro de certificado no Firefox.",
             "Importe a CA do Netskope no Firefox.", ci: true, q: "firefox"),
@@ -299,6 +318,35 @@ public static class KnowledgeBase
         {
             Query = "Netskope Linux iptables", Refs = new[] { "linux" },
             Linux = L(S("O cliente Linux exige iptables. Confira se está instalado e se outro firewall não reescreve as regras:", "sudo iptables -S | head -40"), RestartLinux),
+        },
+        ["fltqueue"] = new()
+        {
+            Query = "Netskope client packet drop performance Linux", Refs = new[] { "trouble" },
+            All = L(S("Compare os horários das rajadas (detalhes) com o relato de lentidão e com a aba Desempenho (CPU, processos pesados)."),
+                    S("Se coincidir com tráfego de containers ou de sincronização, avalie exceção de steering para esses destinos/processos."),
+                    S("Atualize o cliente para a versão mais recente liberada no tenant.")),
+            Linux = L(S("Veja carga e consumidores de CPU no momento:", "uptime; top -b -n1 | head -20")),
+        },
+        ["dnsbypass"] = new()
+        {
+            Query = "Netskope DNS uplink server bypass failed", Refs = new[] { "npagen" },
+            Linux = L(S("Veja os servidores DNS ativos e teste o servidor dos detalhes:", "resolvectl status | sed -n '1,40p'\ndig @SERVIDOR_DNS www.google.com +time=2 +tries=1")),
+            Windows = L(S("Veja os servidores DNS ativos e teste o servidor dos detalhes:", "ipconfig /all\nnslookup www.google.com SERVIDOR_DNS")),
+        },
+        ["sysca"] = new()
+        {
+            Query = "Netskope Linux certificate store nscacert update-ca-certificates", Refs = new[] { "certs", "devtools", "ubuntu" },
+            Linux = L(S("Confira se o bundle do sistema já tem a CA do Netskope (procure “Netskope” na saída):",
+                        "awk -v cmd='openssl x509 -noout -subject' '/BEGIN/{close(cmd)};{print | cmd}' /etc/ssl/certs/ca-certificates.crt | grep -i netskope"),
+                      S("Ubuntu/Debian — copie as CAs do cliente e atualize o bundle:",
+                        "sudo cp /opt/netskope/stagent/data/nscacert.pem /usr/local/share/ca-certificates/nscacert.crt\nsudo cp /opt/netskope/stagent/data/nstenantcert.pem /usr/local/share/ca-certificates/nstenantcert.crt\nsudo update-ca-certificates"),
+                      S("Fedora/RHEL/Rocky — mesmo procedimento em outra pasta:",
+                        "sudo cp /opt/netskope/stagent/data/nscacert.pem /etc/pki/ca-trust/source/anchors/nscacert.crt\nsudo cp /opt/netskope/stagent/data/nstenantcert.pem /etc/pki/ca-trust/source/anchors/nstenantcert.crt\nsudo update-ca-trust"),
+                      S("Ferramentas que não leem o bundle do sistema precisam das variáveis (no ~/.bashrc e ~/.zshrc):",
+                        "export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt\nexport REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt\nexport SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt"),
+                      S("Containers Docker não herdam o repositório do host: copie a CA para dentro da imagem (ou monte /etc/ssl/certs) e rode update-ca-certificates no build.")),
+            Windows = L(S("No Windows a CA fica no repositório do computador. Confira em certlm.msc > Autoridades de Certificação Raiz Confiáveis se “Netskope” está listada.")),
+            Mac = L(S("No macOS a CA fica no Keychain do sistema. Confira em Acesso às Chaves > Sistema se “Netskope” está como confiável.")),
         },
         ["firefox"] = new()
         {

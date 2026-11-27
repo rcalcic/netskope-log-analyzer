@@ -59,6 +59,9 @@ public sealed class Finding
 
     /// <summary>Horário de cada ocorrência (usado na correlação de causa raiz).</summary>
     public List<DateTime> Times { get; } = new();
+
+    /// <summary>Última ocorrência mais de 24 h antes da coleta (ou do horário informado): conta como histórico, não como problema atual.</summary>
+    public bool Historical { get; set; }
 }
 
 public sealed class UnclassifiedGroup
@@ -136,6 +139,8 @@ public sealed class AnalysisResult
     public List<string> DataGaps { get; } = new();
     /// <summary>Quem é o usuário e qual é a máquina (e-mail, login, hostname, série, IDs, interfaces).</summary>
     public List<IdentityItem> Identity { get; } = new();
+    /// <summary>Comparação com a análise anterior da mesma máquina (histórico local), quando houver.</summary>
+    public HistoryComparison? History { get; set; }
 
     // ---- v3.1: visão de TAC
     public List<ConfigItem> Config { get; } = new();
@@ -166,7 +171,11 @@ public sealed class AnalysisResult
         return s;
     }
 
-    public int Count(Severity s) => Findings.Count(f => f.Severity == s);
+    /// <summary>Itens atuais (não históricos) com a gravidade pedida.</summary>
+    public int Count(Severity s) => Findings.Count(f => f.Severity == s && !f.Historical);
+    public int CountHistorical(Severity s) => Findings.Count(f => f.Severity == s && f.Historical);
+    /// <summary>Momento de referência da análise: horário informado pelo usuário ou fim dos logs.</summary>
+    public DateTime? ReferenceTime { get; set; }
     public int RawErrors => Files.Sum(f => f.Errors);
     public int RawWarnings => Files.Sum(f => f.Warnings);
 }

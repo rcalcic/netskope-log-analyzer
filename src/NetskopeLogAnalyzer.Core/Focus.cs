@@ -87,9 +87,24 @@ public static class FocusAnalyzer
 
     private const string Prob = "problema", Warn = "atenção", Ok = "ok", NoData = "sem dados";
 
+    /// <summary>
+    /// Recência: o que só aconteceu mais de 24 h antes da coleta (ou longe do horário informado) vira histórico
+    /// e não entra no resultado — o pacote traz até semanas de log e o que importa é o momento do problema.
+    /// </summary>
+    public static void ApplyRecency(AnalysisResult r, DateTime? problemTime)
+    {
+        var refTime = problemTime ?? r.End;
+        r.ReferenceTime = refTime;
+        var day = TimeSpan.FromHours(24);
+        foreach (var f in r.Findings)
+            f.Historical = refTime is DateTime rt && f.Last is DateTime l && f.Severity <= Severity.Warning
+                && (rt - l > day || (problemTime != null && f.First is DateTime fi && fi - rt > day));
+    }
+
     public static void Run(AnalysisResult r, AnalysisOptions o)
     {
         r.Options = o;
+        ApplyRecency(r, o.ProblemTime);
         r.Focus.Clear();
         foreach (var f in r.Findings) f.FocusTags.Clear();
         r.Domain = string.IsNullOrWhiteSpace(o.Domain) ? null : DomainSearch(r, o.Domain!);
@@ -103,12 +118,12 @@ public static class FocusAnalyzer
             res.Verdict = probs > 0 ? "Problema encontrado" : warns > 0 ? "Possível causa" : "Nada relevante nos logs";
             var top = res.Checks.Where(c => c.Status is Prob or Warn).OrderBy(c => c.Status == Prob ? 0 : 1).Take(3).Select(c => c.Name.ToLowerInvariant()).ToList();
             res.Summary = top.Count > 0 ? "Pontos a verificar: " + string.Join("; ", top) + "." : "Nenhuma verificação deste sintoma encontrou problema no período dos logs. " + NoEvidenceTip(s);
-            foreach (var f in r.Findings.Where(f => s.FindingKeys.Contains(f.Key) && f.Severity != Severity.Noise))
+            foreach (var f in r.Findings.Where(f => s.FindingKeys.Contains(f.Key) && f.Severity != Severity.Noise && !f.Historical))
             {
                 f.FocusTags.Add(s.Label);
                 if (!res.FindingKeys.Contains(f.Key)) res.FindingKeys.Add(f.Key);
             }
-            foreach (var f in r.Findings.Where(f => res.FindingKeys.Contains(f.Key) && f.Severity <= Severity.Warning).Take(4))
+            foreach (var f in r.Findings.Where(f => res.FindingKeys.Contains(f.Key) && f.Severity <= Severity.Warning && !f.Historical).Take(4))
                 if (!string.IsNullOrWhiteSpace(f.Action) && !res.NextSteps.Contains(f.Action)) res.NextSteps.Add(f.Action);
             res.NextSteps.AddRange(Tips(s).Where(t => !res.NextSteps.Contains(t)));
             r.Focus.Add(res);
@@ -143,12 +158,18 @@ public static class FocusAnalyzer
     // ------------------------------------------------------------------ verificações
 
     private static Finding? F(AnalysisResult r, params string[] keys) =>
-        r.Findings.Where(f => keys.Contains(f.Key) && f.Severity != Severity.Noise).OrderBy(f => f.Severity).FirstOrDefault();
+        r.Findings.Where(f => keys.Contains(f.Key) && f.Severity != Severity.Noise).OrderBy(f => f.Historical).ThenBy(f => f.Severity).FirstOrDefault();
 
     private static FocusCheck FromFindings(AnalysisResult r, string name, string okText, params string[] keys)
     {
-        var fs = r.Findings.Where(f => keys.Contains(f.Key) && f.Severity != Severity.Noise).OrderBy(f => f.Severity).ToList();
-        if (fs.Count == 0) return new(name, Ok, okText);
+        var all = r.Findings.Where(f => keys.Contains(f.Key) && f.Severity != Severity.Noise).ToList();
+        var fs = all.Where(f => !f.Historical).OrderBy(f => f.Severity).ToList();
+        if (fs.Count == 0)
+        {
+            var old = all.FirstOrDefault();
+            return old is null ? new(name, Ok, okText)
+                : new(name, Ok, $"Nada recente. Só no histórico: {old.Title} (última vez {Report.Time(old.Last)})");
+        }
         var worst = fs[0].Severity;
         var st = worst == Severity.Critical ? Prob : worst == Severity.Warning ? Warn : Ok;
         var prefix = st == Ok ? "Informativo, não indica falha: " : "";
