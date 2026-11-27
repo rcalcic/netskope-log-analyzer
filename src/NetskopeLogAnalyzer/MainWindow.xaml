@@ -118,15 +118,12 @@
           </ScrollViewer>
         </TabItem>
 
-        <TabItem x:Name="TabExperience" Header="Experiência">
+        <TabItem x:Name="TabPerformance" Header="Experiência e desempenho">
           <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="ExperiencePanel" Margin="8,16,8,24"/>
-          </ScrollViewer>
-        </TabItem>
-
-        <TabItem x:Name="TabPerformance" Header="Desempenho">
-          <ScrollViewer Foreground="{DynamicResource Ink}" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="PerformancePanel" Margin="8,16,8,24"/>
+            <StackPanel Margin="8,16,8,24">
+              <StackPanel x:Name="ExperiencePanel"/>
+              <StackPanel x:Name="PerformancePanel" Margin="0,24,0,0"/>
+            </StackPanel>
           </ScrollViewer>
         </TabItem>
 
@@ -189,55 +186,64 @@
           </ScrollViewer>
         </TabItem>
 
-        <TabItem x:Name="TabUnclassified" Header="Não classificados">
-          <DockPanel Margin="8,16,8,16">
-            <StackPanel DockPanel.Dock="Top">
-              <TextBlock Text="Erros não classificados" FontSize="24" FontWeight="Bold"/>
-              <TextBlock Foreground="{DynamicResource Mute}" Margin="0,6,0,12" TextWrapping="Wrap"
-                         Text="Mensagens de erro/alerta que não batem com nenhum padrão conhecido, agrupadas (números, IPs e IDs foram normalizados). Use “Pesquisar” para buscar a mensagem na documentação e na comunidade Netskope."/>
+        <TabItem x:Name="TabFiles" Header="Pacote">
+          <Grid Margin="8,16,8,16">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="2*" MinHeight="120"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="Auto"/>
+              <RowDefinition Height="3*" MinHeight="160"/>
+            </Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock Text="Arquivos do pacote" FontSize="24" FontWeight="Bold"/>
+              <TextBlock x:Name="TxtCoverage" Foreground="{DynamicResource Mute}" Margin="0,6,0,10" TextWrapping="Wrap"/>
             </StackPanel>
-            <DataGrid x:Name="GridUnclassified">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Mensagem" Binding="{Binding Message}" Width="*">
-                  <DataGridTextColumn.ElementStyle>
-                    <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="FontFamily" Value="Consolas"/><Setter Property="FontSize" Value="12"/><Setter Property="Margin" Value="4"/></Style>
-                  </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Nível" Binding="{Binding LevelText}" Width="70"/>
-                <DataGridTextColumn Header="Qtde" Binding="{Binding Count}" Width="60"/>
-                <DataGridTextColumn Header="Arquivos" Binding="{Binding Files}" Width="200">
-                  <DataGridTextColumn.ElementStyle>
-                    <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="4"/></Style>
-                  </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-                <DataGridTextColumn Header="Última" Binding="{Binding Last}" Width="110"/>
-                <DataGridTemplateColumn Header="" Width="110">
-                  <DataGridTemplateColumn.CellTemplate>
-                    <DataTemplate>
-                      <Button Content="Pesquisar" Style="{StaticResource Small}" Margin="4" Click="SearchUnclassified_Click"/>
-                    </DataTemplate>
-                  </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-              </DataGrid.Columns>
-            </DataGrid>
-          </DockPanel>
-        </TabItem>
-
-        <TabItem x:Name="TabFiles" Header="Arquivos">
-          <DockPanel Margin="8,16,8,16">
-            <TextBlock DockPanel.Dock="Top" Text="Arquivos analisados" FontSize="24" FontWeight="Bold" Margin="0,0,0,12"/>
-            <TextBlock DockPanel.Dock="Bottom" x:Name="TxtSkipped" Foreground="{DynamicResource Mute}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap"/>
-            <DataGrid x:Name="GridFiles">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Arquivo" Binding="{Binding Name}" Width="*"/>
-                <DataGridTextColumn Header="Tamanho" Binding="{Binding Size}" Width="90"/>
-                <DataGridTextColumn Header="Linhas" Binding="{Binding Lines}" Width="80"/>
-                <DataGridTextColumn Header="Erros" Binding="{Binding Errors}" Width="70"/>
-                <DataGridTextColumn Header="Alertas" Binding="{Binding Warnings}" Width="70"/>
-                <DataGridTextColumn Header="Período" Binding="{Binding Period}" Width="260"/>
-              </DataGrid.Columns>
-            </DataGrid>
-          </DockPanel>
+            <Border Grid.Row="1">
+                <DataGrid x:Name="GridFiles">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Arquivo" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="Tamanho" Binding="{Binding Size}" Width="90"/>
+                    <DataGridTextColumn Header="Linhas" Binding="{Binding Lines}" Width="80"/>
+                    <DataGridTextColumn Header="Erros" Binding="{Binding Errors}" Width="70"/>
+                    <DataGridTextColumn Header="Alertas" Binding="{Binding Warnings}" Width="70"/>
+                    <DataGridTextColumn Header="Período" Binding="{Binding Period}" Width="260"/>
+                  </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+            <TextBlock Grid.Row="2" x:Name="TxtSkipped" Foreground="{DynamicResource Mute}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+            <StackPanel Grid.Row="3" Margin="0,18,0,0">
+              <TextBlock x:Name="TxtUncTitle" Text="Mensagens não classificadas" FontSize="20" FontWeight="Bold"/>
+              <TextBlock Foreground="{DynamicResource Mute}" Margin="0,6,0,10" TextWrapping="Wrap"
+                         Text="Erros e alertas que não batem com nenhum padrão conhecido, agrupados (números, IPs e IDs normalizados). Use “Pesquisar” para buscar a mensagem na documentação e na comunidade Netskope."/>
+            </StackPanel>
+            <Border Grid.Row="4">
+                <DataGrid x:Name="GridUnclassified">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Mensagem" Binding="{Binding Message}" Width="*">
+                      <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="FontFamily" Value="Consolas"/><Setter Property="FontSize" Value="12"/><Setter Property="Margin" Value="4"/></Style>
+                      </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Nível" Binding="{Binding LevelText}" Width="70"/>
+                    <DataGridTextColumn Header="Qtde" Binding="{Binding Count}" Width="60"/>
+                    <DataGridTextColumn Header="Arquivos" Binding="{Binding Files}" Width="200">
+                      <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="4"/></Style>
+                      </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Última" Binding="{Binding Last}" Width="110"/>
+                    <DataGridTemplateColumn Header="" Width="110">
+                      <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                          <Button Content="Pesquisar" Style="{StaticResource Small}" Margin="4" Click="SearchUnclassified_Click"/>
+                        </DataTemplate>
+                      </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                  </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+          </Grid>
         </TabItem>
 
         <TabItem x:Name="TabExplorer" Header="Explorador">

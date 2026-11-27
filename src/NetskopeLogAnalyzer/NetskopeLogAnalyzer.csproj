@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <Resource Include="..\..\assets\icon-256.png" Link="icon.png" />
+    <EmbeddedResource Include="..\..\RELEASE_NOTES.md" LogicalName="RELEASE_NOTES.md" />
   </ItemGroup>
 
 </Project>

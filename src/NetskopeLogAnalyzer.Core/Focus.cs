@@ -11,6 +11,8 @@ public sealed class AnalysisOptions
     public string? Domain { get; set; }
     /// <summary>Horário aproximado do problema, no fuso da máquina do usuário (opcional).</summary>
     public DateTime? ProblemTime { get; set; }
+    /// <summary>O que só ocorreu mais de N horas antes da coleta (ou do horário informado) conta como histórico.</summary>
+    public int RecencyHours { get; set; } = 24;
     public bool IsEmpty => Symptoms.Count == 0 && string.IsNullOrWhiteSpace(Domain) && ProblemTime is null;
 }
 
@@ -91,11 +93,13 @@ public static class FocusAnalyzer
     /// Recência: o que só aconteceu mais de 24 h antes da coleta (ou longe do horário informado) vira histórico
     /// e não entra no resultado — o pacote traz até semanas de log e o que importa é o momento do problema.
     /// </summary>
-    public static void ApplyRecency(AnalysisResult r, DateTime? problemTime)
+    public static void ApplyRecency(AnalysisResult r, AnalysisOptions o)
     {
+        var problemTime = o.ProblemTime;
         var refTime = problemTime ?? r.End;
         r.ReferenceTime = refTime;
-        var day = TimeSpan.FromHours(24);
+        r.RecencyHours = Math.Clamp(o.RecencyHours, 1, 24 * 90);
+        var day = TimeSpan.FromHours(r.RecencyHours);
         foreach (var f in r.Findings)
             f.Historical = refTime is DateTime rt && f.Last is DateTime l && f.Severity <= Severity.Warning
                 && (rt - l > day || (problemTime != null && f.First is DateTime fi && fi - rt > day));
@@ -104,7 +108,7 @@ public static class FocusAnalyzer
     public static void Run(AnalysisResult r, AnalysisOptions o)
     {
         r.Options = o;
-        ApplyRecency(r, o.ProblemTime);
+        ApplyRecency(r, o);
         r.Focus.Clear();
         foreach (var f in r.Findings) f.FocusTags.Clear();
         r.Domain = string.IsNullOrWhiteSpace(o.Domain) ? null : DomainSearch(r, o.Domain!);

@@ -684,12 +684,6 @@ public sealed class TacInsights
                 f.Title = firefoxInstalled ? "CA do Netskope não copiada para o Firefox Snap (Firefox Snap não está em uso)" : "CA do Netskope não copiada para o Firefox (Firefox não está instalado)";
                 f.Meaning = "O cliente tenta copiar a CA para as pastas do Firefox, que não existem nesta máquina. Sem Firefox em uso, não há impacto. " + f.Meaning;
             }
-            if (f.Key == "http" && f.Files.Count > 0 && f.Files.All(n => n.StartsWith("nsAppUI", StringComparison.OrdinalIgnoreCase)) && f.Details.Any(d => d.Key.Contains("403") || d.Key.Contains("longpoll")))
-            {
-                f.Severity = Severity.Noise; f.Category = "Ruído";
-                f.Title = $"Canal de notificação da interface recusado pelo tenant (HTTP 403) — {f.Count:N0} vezes";
-                f.Meaning = "A interface do cliente (stAgentUI) consulta o tenant a cada poucos segundos para receber notificações e recebe 403. Não afeta túnel nem navegação, mas gera muitas linhas e faz o nsAppUI.log girar rápido, apagando histórico útil. " + f.Meaning;
-            }
             if (f.Key == "broker") { f.Severity = Severity.Noise; f.Category = "Ruído"; }
             if (f.Key is "dns" or "timeout" or "conn" && f.Files.Count > 0 && f.Files.All(n => n.StartsWith("nsAppUI", StringComparison.OrdinalIgnoreCase)))
             {

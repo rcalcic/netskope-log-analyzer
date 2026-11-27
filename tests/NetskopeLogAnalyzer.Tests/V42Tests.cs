@@ -51,7 +51,7 @@ public class V42Tests
         var r = new Analyzer().AnalyzeItems(new[] { Item("nsAppUI.log", sb.ToString()) });
         var f = r.Findings.First(x => x.Key == "http");
         Assert.Equal(30, f.Count);                       // a linha "code 22" não conta em dobro
-        Assert.Equal(Severity.Info, f.Severity);
+        Assert.Equal(Severity.Noise, f.Severity);
         Assert.Contains("notificações", f.Title);
 
         sb.Append(L("2026/11/05 11:00:00.000001", "stAgentSvc p10", "info", "restapi.cpp:115", "restapi Downloading NPA-gslb pop info"));

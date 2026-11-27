@@ -807,10 +807,10 @@ public sealed class Analyzer
         var other = h.Count - lp;
         if (other == 0)
         {
-            f.Severity = Severity.Info;
-            f.Category = "Configuração";
-            f.Title = "Canal de notificações do cliente recusado pelo tenant";
-            f.Meaning = "A interface do cliente mantém uma conexão de longa duração (longpoll) para receber avisos do console, e o tenant responde com erro a cada tentativa. Não afeta a navegação nem o Private Access: só as notificações enviadas pelo administrador deixam de aparecer.";
+            f.Severity = Severity.Noise;
+            f.Category = "Ruído";
+            f.Title = $"Canal de notificações da interface recusado pelo tenant — {h.Count:N0} vezes";
+            f.Meaning = "A interface do cliente mantém uma conexão de longa duração (longpoll) para receber avisos do console, e o tenant responde com erro a cada poucos segundos. Não afeta a navegação nem o Private Access: só as notificações do administrador deixam de aparecer. Efeito colateral: o nsAppUI.log gira rápido e apaga histórico útil.";
             return;
         }
         f.Title = $"Tenant recusou requisições do cliente ({other}x)" + (lp > 0 ? $" — além de {lp:N0} recusas do canal de notificações" : "");
@@ -900,13 +900,14 @@ public sealed class Analyzer
         static string? Net24(string? ip) => ip is null ? null : ip.LastIndexOf('.') is var k && k > 0 ? ip[..k] : null;
         var byNet = _popNames.GroupBy(kv => Net24(kv.Key)).Where(g => g.Key != null && g.Select(x => x.Value).Distinct().Count() == 1)
             .ToDictionary(g => g.Key!, g => g.First().Value);
+        var named = _rtt.Where(x => !System.Net.IPAddress.TryParse(x.Pop, out _)).Select(x => x.Svc).ToHashSet();
         for (var i = _rtt.Count - 1; i >= 0; i--)
         {
             var x = _rtt[i];
             if (!System.Net.IPAddress.TryParse(x.Pop, out _)) continue;
             var name = _popNames.GetValueOrDefault(x.Pop) ?? (Net24(x.Pop) is { } n ? byNet.GetValueOrDefault(n) : null);
-            if (name is null) _rtt.RemoveAt(i);
-            else _rtt[i] = (x.Time, x.Svc, name, x.Ip, x.Rtt);
+            if (name is not null) _rtt[i] = (x.Time, x.Svc, name, x.Ip, x.Rtt);
+            else if (named.Contains(x.Svc)) _rtt.RemoveAt(i); // o serviço já tem POPs com nome: IP solto só polui
         }
         foreach (var g in _rtt.GroupBy(x => (x.Svc, x.Pop)))
         {
@@ -999,7 +1000,7 @@ public sealed class Analyzer
         if (!r.Snapshots.Any(sn => sn.Processes.Count > 0 || sn.Wifi != null))
             r.DataGaps.Add("O pacote não traz fotos instantâneas de processos ou Wi-Fi (ps aux, tasklist, netsh wlan, nmcli…).");
 
-        Guard("recência", () => FocusAnalyzer.ApplyRecency(r, Options.ProblemTime));
+        Guard("recência", () => FocusAnalyzer.ApplyRecency(r, Options));
         Guard("baseline", () => Baseline.Compute(r));
         Guard("Experience Score", () => ExperienceScore.Compute(r));
         Guard("causa raiz", () => RootCause.Analyze(r));

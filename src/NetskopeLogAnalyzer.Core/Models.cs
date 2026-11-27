@@ -176,6 +176,7 @@ public sealed class AnalysisResult
     public int CountHistorical(Severity s) => Findings.Count(f => f.Severity == s && f.Historical);
     /// <summary>Momento de referência da análise: horário informado pelo usuário ou fim dos logs.</summary>
     public DateTime? ReferenceTime { get; set; }
+    public int RecencyHours { get; set; } = 24;
     public int RawErrors => Files.Sum(f => f.Errors);
     public int RawWarnings => Files.Sum(f => f.Warnings);
 }

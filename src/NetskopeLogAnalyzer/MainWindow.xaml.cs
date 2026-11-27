@@ -83,6 +83,7 @@ public partial class MainWindow : Window
         BuildLegends();
         InitV3();
         InitV4();
+        InitV42();
     }
 
     // ================================================================= entrada de arquivos
@@ -136,6 +137,12 @@ public partial class MainWindow : Window
                 options.ProblemTime = ParseProblemTime(InTime.Text, end);
                 NetskopeLogAnalyzer.Core.FocusAnalyzer.Run(result, options);
             }
+            if (_settings.KeepHistory)
+            {
+                var names = string.Join(", ", paths.Select(p => IOPath.GetFileName(p.TrimEnd('\\', '/'))));
+                try { result.History = new HistoryStore(HistoryStore.DefaultPath).Record(HistoryStore.From(result, names)); }
+                catch (Exception) { /* histórico é opcional: falha ao gravar não impede a análise */ }
+            }
             _result = result;
             TxtFileName.Text = paths.Length <= 2 ? string.Join(", ", paths.Select(p => IOPath.GetFileName(p.TrimEnd('\\', '/')))) : $"{paths.Length} arquivos" + (result.HasTelemetry ? " (com telemetria)" : "");
             TxtProgress.Text = "";
@@ -165,6 +172,7 @@ public partial class MainWindow : Window
         RenderSummary();
         SummaryPanel.Children.Insert(Math.Min(2, SummaryPanel.Children.Count), FocusBlock());
         SummaryPanel.Children.Insert(Math.Min(2, SummaryPanel.Children.Count), IdentityBlock());
+        if (HistoryBlock() is { } hb) SummaryPanel.Children.Insert(Math.Min(3, SummaryPanel.Children.Count), hb);
         RenderTimeline();
         RenderChart();
         RenderFilters();
@@ -182,8 +190,14 @@ public partial class MainWindow : Window
         RenderConfig();
         int prob = _result.Count(Severity.Critical) + _result.Count(Severity.Warning);
         TabFindings.Header = $"Diagnóstico ({prob})";
-        TabUnclassified.Header = $"Não classificados ({_result.Unclassified.Count})";
-        TabFiles.Header = $"Arquivos ({_result.Files.Count})";
+        TabFiles.Header = $"Pacote ({_result.Files.Count})";
+        TxtUncTitle.Text = $"Mensagens não classificadas ({_result.Unclassified.Count})";
+        TxtCoverage.Text = string.Join("  ·  ", new[]
+        {
+            _result.Start is DateTime st && _result.End is DateTime en ? $"Logs de {st:dd/MM HH:mm} a {en:dd/MM HH:mm}" : null,
+            $"{_result.Entries.Count:N0} linhas",
+            _result.Captures.Count > 0 ? $"{_result.Captures.Count} captura(s) de pacotes" : null,
+        }.Where(x => x != null)) + (_result.DataGaps.Count > 0 ? "\n" + string.Join("\n", _result.DataGaps.Select(g => "• " + g)) : "");
         Tabs.SelectedItem = TabSummary;
     }
 
@@ -539,7 +553,7 @@ public partial class MainWindow : Window
         var hl = new StackPanel();
         var tags = new StackPanel { Orientation = Orientation.Horizontal };
         tags.Children.Add(Pill(Report.SeverityLabel(f.Severity), fg, bg));
-        if (f.Historical) tags.Children.Add(Pill("histórico · mais de 24 h antes", Mute, Soft));
+        if (f.Historical) tags.Children.Add(Pill($"histórico · mais de {Report.RecencyText(_result!.RecencyHours)} antes", Mute, Soft));
         tags.Children.Add(T(f.Category, 12, fg: Mute, wrap: false));
         foreach (var tag in f.FocusTags.Take(3)) tags.Children.Add(Pill("◎ " + tag, Theme.OnAccent, Theme.Accent));
         hl.Children.Add(tags);

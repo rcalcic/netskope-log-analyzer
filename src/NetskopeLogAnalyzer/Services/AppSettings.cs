@@ -13,6 +13,12 @@ public sealed class AppSettings
     /// <summary>Tema da interface: "Sistema", "Claro" ou "Escuro".</summary>
     public string Theme { get; set; } = "Sistema";
     public bool AutoCheckUpdates { get; set; } = true;
+    /// <summary>Janela de recência: o que só ocorreu mais de N horas antes da coleta conta como histórico.</summary>
+    public int RecencyHours { get; set; } = 24;
+    /// <summary>Guarda um resumo de cada análise para comparar pacotes da mesma máquina.</summary>
+    public bool KeepHistory { get; set; } = true;
+    /// <summary>Última versão cujas novidades o usuário viu (mostra "o que há de novo" depois de atualizar).</summary>
+    public string? LastSeenVersion { get; set; }
     public bool AutoInstallUpdates { get; set; }
     public DateTime? LastUpdateCheck { get; set; }
     public string? SkippedVersion { get; set; }

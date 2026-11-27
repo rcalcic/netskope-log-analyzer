@@ -79,7 +79,7 @@ public partial class MainWindow
 
     private AnalysisOptions BuildOptions()
     {
-        var o = new AnalysisOptions();
+        var o = new AnalysisOptions { RecencyHours = _settings.RecencyHours };
         foreach (var c in _startChips.Where(c => c.IsChecked == true)) o.Symptoms.Add((string)c.Tag);
         var dom = InDomain.Text.Trim();
         if (dom.Length > 0) o.Domain = FocusAnalyzer.NormalizeDomain(dom);
@@ -128,7 +128,7 @@ public partial class MainWindow
         sp.Children.Add(err);
         apply.Click += (_, _) =>
         {
-            var o = new AnalysisOptions();
+            var o = new AnalysisOptions { RecencyHours = _settings.RecencyHours };
             foreach (var c in local.Where(c => c.IsChecked == true)) o.Symptoms.Add((string)c.Tag);
             if (dom.Text.Trim().Length > 0) o.Domain = FocusAnalyzer.NormalizeDomain(dom.Text);
             if (tim.Text.Trim().Length > 0)

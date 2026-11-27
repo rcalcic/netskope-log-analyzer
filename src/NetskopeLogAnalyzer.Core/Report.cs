@@ -15,6 +15,8 @@ public static class Report
 
     public static string Time(DateTime? t) => t is DateTime d ? d.ToString("dd/MM HH:mm:ss", CultureInfo.InvariantCulture) : "—";
 
+    public static string RecencyText(int hours) => hours % 24 == 0 && hours >= 48 ? $"{hours / 24} dias" : $"{hours} h";
+
     public static string Verdict(AnalysisResult r)
     {
         int c = r.Count(Severity.Critical), w = r.Count(Severity.Warning);
@@ -36,7 +38,7 @@ public static class Report
         if (who.Length > 0) sb.AppendLine($"Usuário: {who}");
         sb.AppendLine($"Resultado: {Verdict(r)} ({r.Count(Severity.Critical)} crítico(s), {r.Count(Severity.Warning)} de atenção, {r.Count(Severity.Info)} informativo(s), {r.Count(Severity.Noise)} ruído(s) conhecido(s)).");
         var hist = r.Findings.Count(f => f.Historical);
-        if (hist > 0) sb.AppendLine($"Histórico: {hist} item(ns) só ocorreram mais de 24 h antes de {Time(r.ReferenceTime)} e não entram no resultado.");
+        if (hist > 0) sb.AppendLine($"Histórico: {hist} item(ns) só ocorreram mais de {RecencyText(r.RecencyHours)} antes de {Time(r.ReferenceTime)} e não entram no resultado.");
         if (r.Score is double sc) sb.AppendLine($"Experience Score: {sc:0}/100 ({ExperienceScore.Band(sc)}) em {r.Scores.Count} janelas de 5 min.");
         foreach (var (svc, av) in r.Availability) sb.AppendLine($"Disponibilidade {svc}: {av:0.#}% do tempo conectado.");
         if (!r.HasTelemetry) sb.AppendLine("Observação: o pacote de logs não traz séries contínuas de CPU, memória, disco e Wi-Fi (só a foto do momento da coleta).");

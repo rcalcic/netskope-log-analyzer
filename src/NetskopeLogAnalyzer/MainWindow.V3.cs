@@ -506,52 +506,7 @@ public partial class MainWindow
 
     // ================================================================= Configurações
 
-    private void Settings_Click(object sender, RoutedEventArgs e)
-    {
-        var w = new Window { Title = "Configurações", Owner = this, Width = 600, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner, ResizeMode = ResizeMode.NoResize, Background = Theme.Background, Foreground = Theme.Ink, FontFamily = FontFamily, FontSize = 14 };
-        var sp = new StackPanel { Margin = new Thickness(22) };
-        sp.Children.Add(T("Configurações", 22, FontWeights.Bold, margin: new Thickness(0, 0, 0, 12)));
-        sp.Children.Add(T("Este aplicativo só analisa pacotes de logs salvos pelos usuários. Nada é coletado nem enviado desta máquina; a única conexão é a verificação de atualização no GitHub.", 13, fg: Mute, margin: new Thickness(0, 0, 0, 8)));
-        sp.Children.Add(T("Aparência", 16, FontWeights.Bold, margin: new Thickness(0, 8, 0, 4)));
-        var themes = new WrapPanel();
-        var themeChoice = _settings.Theme;
-        foreach (var opt in new[] { Theme.System, Theme.Light, Theme.Dark })
-        {
-            var rb = new RadioButton { Content = opt == Theme.System ? "Igual ao Windows" : opt, GroupName = "theme", IsChecked = _settings.Theme == opt, Margin = new Thickness(0, 4, 18, 0), Foreground = Theme.Ink };
-            rb.Checked += (_, _) => themeChoice = opt;
-            themes.Children.Add(rb);
-        }
-        sp.Children.Add(themes);
-        sp.Children.Add(T("Tema escuro com a paleta da Netskope. Também dá para alternar pelo botão ☾/☀ no topo.", 12, fg: Mute, margin: new Thickness(0, 4, 0, 0)));
-
-        sp.Children.Add(T("Atualizações", 16, FontWeights.Bold, margin: new Thickness(0, 16, 0, 4)));
-        var autoCheck = new CheckBox { Content = "Verificar atualizações automaticamente", IsChecked = _settings.AutoCheckUpdates, Margin = new Thickness(0, 4, 0, 0) };
-        var autoInstall = new CheckBox { Content = "Instalar atualizações automaticamente (pede confirmação do Windows)", IsChecked = _settings.AutoInstallUpdates, Margin = new Thickness(0, 4, 0, 0) };
-        sp.Children.Add(autoCheck); sp.Children.Add(autoInstall);
-        if (AppSettings.UpdatesDisabledByPolicy) { autoCheck.IsEnabled = autoInstall.IsEnabled = false; sp.Children.Add(T("Atualizações desativadas pela política do TI.", 12, fg: AmberText)); }
-        var ver = T($"Versão instalada: {UpdateService.Current.ToString(3)}" + (_settings.LastUpdateCheck is DateTime lc ? $" · última verificação: {lc:dd/MM HH:mm}" : ""), 12.5, fg: Mute, margin: new Thickness(0, 6, 0, 0));
-        sp.Children.Add(ver);
-
-        var bar = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 18, 0, 0) };
-        var check = new Button { Content = "Verificar agora", Style = (Style)FindResource("Pill"), Margin = new Thickness(0, 0, 8, 0), IsEnabled = !AppSettings.UpdatesDisabledByPolicy };
-        check.Click += async (_, _) => { ver.Text = "Verificando…"; var found = await CheckUpdatesAsync(true); ver.Text = found ? $"Nova versão {_update!.Version.ToString(3)} disponível — veja a barra azul." : $"Você está na versão mais recente ({UpdateService.Current.ToString(3)})."; };
-        var save = new Button { Content = "Salvar", Style = (Style)FindResource("PillDark") };
-        save.Click += (_, _) =>
-        {
-            _settings.AutoCheckUpdates = autoCheck.IsChecked == true;
-            _settings.AutoInstallUpdates = autoInstall.IsChecked == true;
-            var themeChanged = _settings.Theme != themeChoice;
-            _settings.Theme = themeChoice;
-            _settings.Save();
-            if (themeChanged) Theme.Apply(themeChoice);
-            w.Close();
-            ShowToast("Configurações salvas.");
-        };
-        bar.Children.Add(check); bar.Children.Add(save);
-        sp.Children.Add(bar);
-        w.Content = new ScrollViewer { Content = sp, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, MaxHeight = SystemParameters.WorkArea.Height * 0.9 };
-        w.ShowDialog();
-    }
+    private void Settings_Click(object sender, RoutedEventArgs e) => OpenSettings();
 
     // ================================================================= atualização automática
 
@@ -601,7 +556,7 @@ public partial class MainWindow
         }
     }
 
-    private void UpdateNotes_Click(object sender, RoutedEventArgs e) { if (_update != null) OpenUrlSafe(_update.PageUrl); }
+    private void UpdateNotes_Click(object sender, RoutedEventArgs e) { if (_update != null) ShowNotes($"Novidades da versão {_update.Version.ToString(3)}", _update.Notes); }
 
     private void UpdateSkip_Click(object sender, RoutedEventArgs e)
     {
