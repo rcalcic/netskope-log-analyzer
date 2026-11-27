@@ -160,7 +160,7 @@ public partial class MainWindow
             wrap.Children.Add(b);
         }
         if (r.Score is double sc)
-            Tile($"{sc:0}", "Experience Score (" + ExperienceScore.Band(sc) + (r.ScoreMissing != null ? ", parcial" : "") + ")", sc <= 30 ? Red : sc <= 70 ? AmberText : Green, "0–100, como o DEM. Clique para ver os componentes.", TabExperience);
+            Tile($"{sc:0}", "Experience Score (" + ExperienceScore.Band(sc) + (r.ScoreMissing != null ? ", parcial" : "") + ")", sc <= 30 ? Red : sc <= 70 ? AmberText : Green, "0–100, como o DEM. Clique para ver os componentes.", TabPerformance);
         var crit = r.Incidents.Count(i => i.Severity == Severity.Critical);
         Tile(r.Incidents.Count.ToString(CultureInfo.InvariantCulture), r.Incidents.Count == 1 ? "incidente" : $"incidentes ({crit} crítico(s))", r.Incidents.Count == 0 ? Green : crit > 0 ? Red : AmberText, "Clique para ver horário e causa raiz.", TabIncidents);
         foreach (var (svc, av) in r.Availability)
