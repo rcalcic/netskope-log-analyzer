@@ -813,7 +813,8 @@ public sealed class Analyzer
             f.Meaning = "A interface do cliente mantém uma conexão de longa duração (longpoll) para receber avisos do console, e o tenant responde com erro a cada poucos segundos. Não afeta a navegação nem o Private Access: só as notificações do administrador deixam de aparecer. Efeito colateral: o nsAppUI.log gira rápido e apaga histórico útil.";
             return;
         }
-        f.Title = $"Tenant recusou requisições do cliente ({other}x)" + (lp > 0 ? $" — além de {lp:N0} recusas do canal de notificações" : "");
+        f.Title = "Tenant recusou requisições do cliente" + (lp > 0 ? $" (além de {lp:N0} recusas do canal de notificações)" : "");
+        f.Count = other;
         f.Severity = other >= 20 ? Severity.Warning : f.Severity == Severity.Critical ? Severity.Warning : f.Severity;
         f.Meaning = "O tenant respondeu com erro HTTP a downloads do cliente (veja quais nos detalhes). 403 = usuário/dispositivo não autorizado ou recurso não liberado para ele; 401 = autenticação; 5xx = erro do lado Netskope.";
     }

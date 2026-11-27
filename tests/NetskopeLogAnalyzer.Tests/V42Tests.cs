@@ -59,7 +59,8 @@ public class V42Tests
         r = new Analyzer().AnalyzeItems(new[] { Item("nsAppUI.log", sb.ToString()) });
         f = r.Findings.First(x => x.Key == "http");
         Assert.Contains(f.Details, d => d.Key == "NPA-gslb pop info: HTTP 403");
-        Assert.StartsWith("Tenant recusou requisições do cliente (1x)", f.Title);
+        Assert.StartsWith("Tenant recusou requisições do cliente (além de 30", f.Title);
+        Assert.Equal(1, f.Count);
     }
 
     [Fact]
