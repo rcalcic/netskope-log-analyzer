@@ -187,7 +187,7 @@
         </TabItem>
 
         <TabItem x:Name="TabFiles" Header="Pacote">
-          <Grid Margin="8,16,8,16">
+          <Grid Margin="8,16,8,16" TextElement.Foreground="{DynamicResource Ink}">
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto"/>
               <RowDefinition Height="2*" MinHeight="120"/>
@@ -247,7 +247,7 @@
         </TabItem>
 
         <TabItem x:Name="TabExplorer" Header="Explorador">
-          <DockPanel Margin="8,16,8,16">
+          <DockPanel Margin="8,16,8,16" TextElement.Foreground="{DynamicResource Ink}">
             <StackPanel DockPanel.Dock="Top">
               <TextBlock Text="Explorador de logs" FontSize="24" FontWeight="Bold"/>
               <Grid Margin="0,12,0,0">
