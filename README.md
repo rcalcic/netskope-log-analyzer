@@ -12,15 +12,14 @@ Aplicativo **nativo para Windows** (C#/.NET 8, WPF) que analisa o pacote de logs
 |---|---|
 | **Resumo** | **Usuário e máquina** (e-mail registrado, login do sistema, hostname, fabricante, modelo, série, IDs do Netskope, interfaces e IPs, forma de registro), veredito, **Experience Score** (0–100), incidentes, disponibilidade do túnel, causa principal, versão do cliente, tenant, steering, POP, IP de saída e principais pontos. |
 | **Incidentes** | Cada queda ou degradação com **horário de início e fim**, duração, impacto e **causas prováveis ranqueadas por confiança**, com as evidências (linhas de log e métricas) e a resolução passo a passo. |
-| **Experiência** | Score por janela de 5 min dividido em Dispositivo, Rede, Netskope e Aplicação, com o gargalo de cada período. |
+| **Experiência e desempenho** | Score por janela de 5 min dividido em Dispositivo, Rede, Netskope e Aplicação, com o gargalo de cada período. Também traz as métricas no estilo do DEM tiradas só dos logs: atraso das tarefas do cliente (responsividade da máquina), travamentos internos, suspensões, processos que disputam CPU, mudanças de rede, NXDOMAIN, RTT e retransmissões até o POP do Private Access, quedas e tempo de reconexão. |
 | **Linha do tempo** | Serviço, registro, túnel conectado/derrubado, desativação pelo usuário, troca de rede/IP de saída/POP, eventos de energia e gráfico de erros por minuto. |
-| **Diagnóstico** | ~40 padrões conhecidos (Crítico, Atenção, Informativo, Ruído) com significado, **como resolver**, comandos prontos e documentação oficial. |
+| **Diagnóstico** | ~50 padrões conhecidos (Crítico, Atenção, Informativo, Ruído) com significado, **como resolver**, comandos prontos e documentação oficial. |
 | **Dispositivo** | **Baseline de recursos da máquina** a partir da foto do pacote: tempo ligado, núcleos, CPU média desde o boot, quem mais usou CPU, processos, memória total/em uso, maiores consumidores de memória, navegadores e discos, cada um com limite e avaliação. Com telemetria JSONL, séries de CPU, memória, disco e Wi-Fi. |
 | **Rede** | Disponibilidade por túnel, latência até os POPs medida pelo próprio cliente (GSLB), POP mais rápido, histórico de IP de saída, ping/perda/jitter, DNS, TCP até o POP e traceroute. |
 | **Aplicações** | Tráfego que o cliente registrou por processo e destino: tunelado, bypass e UDP/QUIC bloqueado. |
-| **Desempenho** | Métricas no estilo do DEM tiradas só dos logs: atraso das tarefas do cliente (responsividade da máquina), travamentos internos, suspensões, processos que disputam CPU, mudanças de rede, NXDOMAIN, RTT e retransmissões até o POP do Private Access, quedas e tempo de reconexão. |
 | **Configuração** | Configuração efetiva traduzida: steering, detecção on-prem (e por que a máquina está On/Off Prem), exceções, apps com certificado fixo, fail-close, permissões do usuário, licença DEM, postura. |
-| **Não classificados / Arquivos / Explorador** | Erros sem padrão conhecido, arquivos lidos e busca em todas as linhas. |
+| **Pacote / Explorador** | **Pacote**: arquivos lidos, período coberto, lacunas e mensagens sem padrão conhecido. **Explorador**: busca em todas as linhas. |
 
 No **Resumo**, o app responde às perguntas que o suporte faz primeiro (sintoma, desde quando, Internet ou Private Access, onde a máquina estava, o que mudou, o que interfere, desempenho, período coberto por cada log e próximo passo). Na aba **Rede** ficam as sessões do Private Access (POP, motivo de cada queda, tempo até reconectar), DNS e domínio de pesquisa por interface e o resumo das capturas `.pcap` do pacote (retransmissões, RST, SYN sem resposta, DNS, alertas TLS).
 
@@ -33,6 +32,12 @@ Todos os gráficos têm faixas de limite, marcação dos incidentes e dica com o
 Na tela inicial, antes de abrir o pacote, marque o que o usuário relatou (pode marcar vários): **Lentidão, Site ou URL não abre, Private Access, DNS, Sem navegação, Quedas e desconexões, Certificado/SSL, Aplicativo específico, Bloqueio indevido, Login/registro, Cliente desligado ou travando, Máquina lenta (CPU/memória), Conflito com VPN, Dentro da empresa (on-prem) e Wi-Fi/rede local**. Opcionalmente informe o **site afetado** e o **horário do problema**.
 
 O Resumo passa a abrir com o bloco **Foco da análise**: para cada sintoma, uma lista de verificações com estado (*problema*, *atenção*, *ok*, *sem dados*), o veredito (*Problema encontrado*, *Possível causa* ou *Nada relevante nos logs*) e próximos passos. O site informado é procurado no tráfego (tunelado, bypass, DNS, erros, processos) e nas exceções do steering; o horário destaca os incidentes em ±30 min. No Diagnóstico, o filtro **◎ Relato do usuário** mostra primeiro o que tem a ver com o relato. Dá para mudar o foco depois sem reabrir o pacote.
+
+## Atual × histórico e histórico da máquina
+
+O pacote de logs costuma trazer semanas de registros. O que só aconteceu mais de 24 h antes da coleta (ou longe do horário informado no relato) aparece com a etiqueta **histórico** e não entra no resultado; a janela é configurável (12 h a 7 dias).
+
+Cada análise guarda localmente um resumo (máquina, usuário, versão e problemas, nunca as linhas de log). Ao abrir outro pacote da mesma máquina, o Resumo mostra o que é novo, o que sumiu e o que continua. Abrir vários pacotes da mesma máquina juntos não duplica contagens.
 
 ## Tema escuro
 
