@@ -1,6 +1,6 @@
-**Netskope Log Analyzer 4.2.1 — análise calibrada com pacotes reais**
+**Netskope Log Analyzer 4.2.2 — análise calibrada com pacotes reais**
 
-4.2.1: corrige no tema escuro os títulos e os cabeçalhos de tabela das abas Pacote e Explorador.
+4.2.2: corrige no tema escuro os títulos, os cabeçalhos de tabela e as listas de seleção das abas Pacote e Explorador.
 
 Esta versão foi ajustada com 14 pacotes reais de clientes Linux (Ubuntu), coletados entre outubro e novembro, e com as investigações feitas sobre eles.
 

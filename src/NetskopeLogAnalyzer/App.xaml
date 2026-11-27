@@ -175,6 +175,13 @@
       <Setter Property="SelectionMode" Value="Single"/>
       <Setter Property="RowHeaderWidth" Value="0"/>
     </Style>
+    <!-- a moldura padrão do ComboBox do Windows é sempre clara: texto escuro para ficar legível nos dois temas -->
+    <Style TargetType="ComboBox">
+      <Setter Property="Foreground" Value="#1F2328"/>
+    </Style>
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Foreground" Value="#1F2328"/>
+    </Style>
     <Style TargetType="DataGridColumnHeader">
       <Setter Property="Background" Value="{DynamicResource Soft}"/>
       <Setter Property="Foreground" Value="{DynamicResource Ink}"/>
